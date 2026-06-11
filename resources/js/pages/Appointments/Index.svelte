@@ -62,6 +62,7 @@
     let isDialogOpen = $state(false);
 
     const form = useForm({
+        id: null as number | null,
         patient_id: '',
         dentist_id: dentists.length > 0 ? dentists[0].id.toString() : '',
         date: '',
@@ -116,11 +117,22 @@
     }
 
     function handleEventClick(clickInfo: any) {
-        // En una implementación real, esto abriría un modal para editar la cita
-        alert('Cita: ' + clickInfo.event.title + '\nTratamiento: ' + clickInfo.event.extendedProps.treatment);
+        const evt = clickInfo.event.extendedProps;
+        form.id = evt.id;
+        form.patient_id = evt.patient_id?.toString() || '';
+        form.dentist_id = evt.dentist_id?.toString() || '';
+        form.date = evt.date;
+        form.start_time = evt.start_time;
+        form.duration = evt.duration?.toString() || '30';
+        form.treatment = evt.treatment;
+        form.status = evt.status || 'pending';
+        form.notes = evt.notes || '';
+        isDialogOpen = true;
     }
 
     function openNewCita() {
+        form.reset();
+        form.id = null;
         const now = new Date();
         form.date = now.toISOString().split('T')[0];
         form.start_time = '09:00';
@@ -129,12 +141,32 @@
 
     function submit(e: Event) {
         e.preventDefault();
-        form.post(store(), {
-            onSuccess: () => {
-                isDialogOpen = false;
-                form.reset();
-            }
-        });
+        if (form.id) {
+            form.put(`/appointments/${form.id}`, {
+                onSuccess: () => {
+                    isDialogOpen = false;
+                    form.reset();
+                }
+            });
+        } else {
+            form.post(store(), {
+                onSuccess: () => {
+                    isDialogOpen = false;
+                    form.reset();
+                }
+            });
+        }
+    }
+
+    function deleteCita() {
+        if (form.id && confirm('¿Estás seguro de eliminar esta cita?')) {
+            router.delete(`/appointments/${form.id}`, {
+                onSuccess: () => {
+                    isDialogOpen = false;
+                    form.reset();
+                }
+            });
+        }
     }
 </script>
 
@@ -163,7 +195,7 @@
 <Dialog bind:open={isDialogOpen}>
     <DialogContent class="sm:max-w-[500px]">
         <DialogHeader>
-            <DialogTitle>Programar Nueva Cita</DialogTitle>
+            <DialogTitle>{form.id ? 'Editar' : 'Programar Nueva'} Cita</DialogTitle>
             <DialogDescription>
                 Completa los detalles para agendar la cita.
             </DialogDescription>
@@ -234,9 +266,16 @@
                 </div>
             </div>
             
-            <DialogFooter>
-                <Button type="button" variant="outline" onclick={() => isDialogOpen = false}>Cancelar</Button>
-                <Button type="submit" disabled={form.processing} class="bg-blue-600">Guardar Cita</Button>
+            <DialogFooter class="flex justify-between w-full sm:justify-between items-center">
+                {#if form.id}
+                    <Button type="button" variant="destructive" onclick={deleteCita}>Eliminar</Button>
+                {:else}
+                    <div></div>
+                {/if}
+                <div class="flex gap-2">
+                    <Button type="button" variant="outline" onclick={() => isDialogOpen = false}>Cancelar</Button>
+                    <Button type="submit" disabled={form.processing} class="bg-blue-600">{form.id ? 'Actualizar' : 'Guardar'} Cita</Button>
+                </div>
             </DialogFooter>
         </form>
     </DialogContent>

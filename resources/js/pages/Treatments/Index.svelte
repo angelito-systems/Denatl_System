@@ -21,19 +21,78 @@
         TableHeader,
         TableRow
     } from '@/components/ui/table';
-    import { router } from '@inertiajs/svelte';
+    import { router, useForm } from '@inertiajs/svelte';
     import { index } from '@/routes/treatments';
+    import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+    import { Label } from '@/components/ui/label';
+    import { toast } from 'svelte-sonner';
+    import { Loader2 } from 'lucide-svelte';
 
     let { treatments, filters } = $props();
 
     let search = $state(filters?.search || '');
     let searchTimeout: ReturnType<typeof setTimeout>;
 
+    let isTreatmentModalOpen = $state(false);
+    const treatmentForm = useForm({
+        id: null as number | null,
+        name: '',
+        category: 'Ortodoncia',
+        base_price: '',
+        estimated_duration_minutes: '30'
+    });
+
     function handleSearch() {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             router.get(index(), { search }, { preserveState: true, replace: true });
         }, 300);
+    }
+
+    function openNewModal() {
+        treatmentForm.reset();
+        treatmentForm.id = null;
+        isTreatmentModalOpen = true;
+    }
+
+    function editTreatment(treatment: any) {
+        treatmentForm.id = treatment.id;
+        treatmentForm.name = treatment.name;
+        treatmentForm.category = treatment.category;
+        treatmentForm.base_price = treatment.base_price;
+        treatmentForm.estimated_duration_minutes = treatment.estimated_duration_minutes;
+        isTreatmentModalOpen = true;
+    }
+
+    function saveTreatment(e: Event) {
+        e.preventDefault();
+        if (treatmentForm.id) {
+            treatmentForm.put(`/treatments/${treatmentForm.id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    isTreatmentModalOpen = false;
+                    toast.success('Tratamiento actualizado');
+                }
+            });
+        } else {
+            treatmentForm.post('/treatments', {
+                preserveScroll: true,
+                onSuccess: () => {
+                    isTreatmentModalOpen = false;
+                    treatmentForm.reset();
+                    toast.success('Tratamiento creado');
+                }
+            });
+        }
+    }
+
+    function deleteTreatment(id: number) {
+        if (confirm('¿Seguro que deseas eliminar este tratamiento?')) {
+            router.delete(`/treatments/${id}`, {
+                preserveScroll: true,
+                onSuccess: () => toast.success('Tratamiento eliminado')
+            });
+        }
     }
 </script>
 
@@ -42,7 +101,7 @@
 <div class="flex flex-col gap-6 p-6">
     <div class="flex items-center justify-between">
         <h1 class="text-3xl font-bold tracking-tight">Catálogo de Tratamientos</h1>
-        <Button class="bg-blue-600 hover:bg-blue-700">
+        <Button class="bg-blue-600 hover:bg-blue-700" onclick={openNewModal}>
             <Plus class="h-4 w-4 mr-2" />
             Nuevo Tratamiento
         </Button>
@@ -92,10 +151,10 @@
                             <TableCell>{treatment.estimated_duration_minutes} min</TableCell>
                             <TableCell class="text-right">
                                 <div class="flex justify-end gap-2">
-                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-blue-600">
+                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-blue-600" onclick={() => editTreatment(treatment)}>
                                         <FileEdit class="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-red-600">
+                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-red-600" onclick={() => deleteTreatment(treatment.id)}>
                                         <Trash2 class="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -107,3 +166,55 @@
         </Table>
     </div>
 </div>
+
+<Dialog bind:open={isTreatmentModalOpen}>
+    <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+            <DialogTitle>{treatmentForm.id ? 'Editar' : 'Nuevo'} Tratamiento</DialogTitle>
+        </DialogHeader>
+        <form onsubmit={saveTreatment} class="space-y-4 pt-4">
+            <div class="space-y-2">
+                <Label>Nombre del Tratamiento *</Label>
+                <Input type="text" bind:value={treatmentForm.name} required />
+                {#if treatmentForm.errors.name}<p class="text-xs text-red-500">{treatmentForm.errors.name}</p>{/if}
+            </div>
+            
+            <div class="space-y-2">
+                <Label>Categoría *</Label>
+                <select class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" bind:value={treatmentForm.category} required>
+                    <option value="Ortodoncia">Ortodoncia</option>
+                    <option value="Implantes">Implantes</option>
+                    <option value="Endodoncia">Endodoncia</option>
+                    <option value="Odontopediatría">Odontopediatría</option>
+                    <option value="Estética">Estética</option>
+                    <option value="General">General</option>
+                </select>
+                {#if treatmentForm.errors.category}<p class="text-xs text-red-500">{treatmentForm.errors.category}</p>{/if}
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <Label>Precio Base (S/) *</Label>
+                    <Input type="number" step="0.01" min="0" bind:value={treatmentForm.base_price} required />
+                    {#if treatmentForm.errors.base_price}<p class="text-xs text-red-500">{treatmentForm.errors.base_price}</p>{/if}
+                </div>
+                <div class="space-y-2">
+                    <Label>Duración (min) *</Label>
+                    <Input type="number" min="1" bind:value={treatmentForm.estimated_duration_minutes} required />
+                    {#if treatmentForm.errors.estimated_duration_minutes}<p class="text-xs text-red-500">{treatmentForm.errors.estimated_duration_minutes}</p>{/if}
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-4">
+                <Button variant="outline" type="button" onclick={() => isTreatmentModalOpen = false}>Cancelar</Button>
+                <Button type="submit" class="bg-blue-600 hover:bg-blue-700" disabled={treatmentForm.processing}>
+                    {#if treatmentForm.processing}
+                        <Loader2 class="w-4 h-4 mr-2 animate-spin" /> Guardando...
+                    {:else}
+                        {treatmentForm.id ? 'Actualizar' : 'Guardar'}
+                    {/if}
+                </Button>
+            </div>
+        </form>
+    </DialogContent>
+</Dialog>

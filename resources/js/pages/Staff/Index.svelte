@@ -29,7 +29,8 @@
     } from '@/components/ui/dialog';
     import { router, useForm } from '@inertiajs/svelte';
     import { index } from '@/routes/staff';
-    import { Search, Plus, UserCog, Trash2, Edit } from 'lucide-svelte';
+    import { Search, Plus, UserCog, Trash2, Edit, Loader2 } from 'lucide-svelte';
+    import { toast } from 'svelte-sonner';
 
     let { users, roles, filters } = $props();
 
@@ -65,10 +66,46 @@
 
     function saveUser(e: Event) {
         e.preventDefault();
-        // Simulación: aquí llamaríamos a la ruta POST / PUT real del staff
-        console.log('Guardando usuario:', $userForm);
-        isUserModalOpen = false;
-        userForm.reset();
+        
+        if (userForm.id) {
+            userForm.put(`/staff/${userForm.id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    isUserModalOpen = false;
+                    toast.success('Usuario actualizado correctamente');
+                }
+            });
+        } else {
+            userForm.post('/staff', {
+                preserveScroll: true,
+                onSuccess: () => {
+                    isUserModalOpen = false;
+                    userForm.reset();
+                    toast.success('Usuario creado correctamente');
+                }
+            });
+        }
+    }
+
+    function editUser(user: any) {
+        userForm.id = user.id;
+        userForm.first_name = user.first_name;
+        userForm.last_name = user.last_name;
+        userForm.email = user.email;
+        userForm.username = user.username;
+        userForm.password = ''; // Don't show password, only edit if filled
+        userForm.role = user.roles && user.roles.length > 0 ? user.roles[0].name : 'Dentista';
+        userForm.is_active = user.is_active;
+        isUserModalOpen = true;
+    }
+
+    function deleteUser(id: number) {
+        if (confirm('¿Estás seguro de eliminar a este usuario?')) {
+            router.delete(`/staff/${id}`, {
+                preserveScroll: true,
+                onSuccess: () => toast.success('Usuario eliminado')
+            });
+        }
     }
 </script>
 
@@ -144,9 +181,14 @@
                                 <span class="text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-200 text-xs">Activo</span>
                             </TableCell>
                             <TableCell class="text-right">
-                                <Button variant="outline" size="sm" class="h-8">
-                                    <Edit class="h-3 w-3 mr-1" /> Editar
-                                </Button>
+                                <div class="flex items-center justify-end gap-1">
+                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onclick={() => editUser(user)} title="Editar">
+                                        <Edit class="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onclick={() => deleteUser(user.id)} title="Eliminar">
+                                        <Trash2 class="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </TableCell>
                         </TableRow>
                     {/each}
@@ -164,7 +206,7 @@
         <DialogHeader>
             <DialogTitle class="flex items-center gap-2">
                 <UserCog class="w-5 h-5 text-blue-600" />
-                Nuevo Usuario
+                {$userForm.id ? 'Editar Usuario' : 'Nuevo Usuario'}
             </DialogTitle>
         </DialogHeader>
         <form onsubmit={saveUser} class="space-y-4 py-4">
@@ -191,10 +233,11 @@
             <div class="space-y-2">
                 <Label>Rol del usuario *</Label>
                 <select class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" bind:value={$userForm.role}>
-                    <option>Administrador</option>
-                    <option>Dentista</option>
-                    <option>Recepcionista</option>
+                    {#each roles as role}
+                        <option value={role}>{role}</option>
+                    {/each}
                 </select>
+                {#if $userForm.errors.role}<p class="text-xs text-red-500">{$userForm.errors.role}</p>{/if}
             </div>
             <div class="flex items-center space-x-2 pt-2">
                 <Checkbox id="is-active" bind:checked={$userForm.is_active} />
@@ -207,8 +250,11 @@
                     ✕ Cancelar
                 </Button>
                 <Button type="submit" class="bg-blue-600 hover:bg-blue-700" disabled={$userForm.processing}>
-                    <UserCog class="w-4 h-4 mr-2" />
-                    Guardar usuario
+                    {#if $userForm.processing}
+                        <Loader2 class="w-4 h-4 mr-2 animate-spin" /> Guardando...
+                    {:else}
+                        <UserCog class="w-4 h-4 mr-2" /> {$userForm.id ? 'Actualizar' : 'Guardar'} usuario
+                    {/if}
                 </Button>
             </div>
         </form>

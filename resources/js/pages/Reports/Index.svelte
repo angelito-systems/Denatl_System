@@ -17,7 +17,7 @@
     import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
     import { Download, Calendar, Filter } from 'lucide-svelte';
     import { router } from '@inertiajs/svelte';
-    import { index as reportsIndex } from '@/routes/reports';
+    import { index as reportsIndex } from '@/routes/reportes';
     
     let { revenueByMonth, treatmentsByCategory, paymentsByMethod, kpis } = $props();
 

@@ -12,7 +12,7 @@ class StoreTreatmentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,7 +23,10 @@ class StoreTreatmentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'name' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'base_price' => 'required|numeric|min:0',
+            'estimated_duration_minutes' => 'required|integer|min:1'
         ];
     }
 }
