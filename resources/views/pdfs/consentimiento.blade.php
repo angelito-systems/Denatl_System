@@ -30,9 +30,19 @@
 
     <div class="signatures">
         <div class="signature-box">
+            @if(isset($signature) && $signature)
+                <img src="{{ $signature }}" alt="Firma Paciente" style="max-height: 80px; margin-bottom: -15px;">
+            @else
+                <br><br><br>
+            @endif
             <div class="signature-line">Firma del Paciente</div>
         </div>
         <div class="signature-box">
+            @if(isset($adminSignature) && $adminSignature)
+                <img src="{{ $adminSignature }}" alt="Firma Clínica" style="max-height: 80px; margin-bottom: -15px;">
+            @else
+                <br><br><br>
+            @endif
             <div class="signature-line">Odontólogo Tratante</div>
         </div>
     </div>

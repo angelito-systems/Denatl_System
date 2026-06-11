@@ -59,20 +59,22 @@ class DocumentController extends Controller
     public function sign(Request $request, Document $document, PdfGeneratorService $pdfService)
     {
         $request->validate([
-            'signature' => 'required|string' // base64 image
+            'signature' => 'required|string', // base64 image (Cliente)
+            'admin_signature' => 'required|string' // base64 image (Admin)
         ]);
 
         // Guardar la firma en el registro
         $document->update([
             'signature' => $request->signature,
+            'admin_signature' => $request->admin_signature,
             'signed_at' => now(),
             'status' => 'Firmado'
         ]);
 
-        // Ahora generar el PDF físico inyectando la firma
+        // Ahora generar el PDF físico inyectando las firmas
         $patient = $document->patient;
         
-        $pdfBase64 = $pdfService->generarPlantilla($patient, $document->type, $document->signature)->base64();
+        $pdfBase64 = $pdfService->generarPlantilla($patient, $document->type, $document->signature, $document->admin_signature)->base64();
         
         $pdfContent = base64_decode($pdfBase64);
         $tempPath = sys_get_temp_dir() . '/' . uniqid() . '.pdf';

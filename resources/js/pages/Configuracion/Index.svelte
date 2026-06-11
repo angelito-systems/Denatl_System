@@ -12,8 +12,12 @@
     import { Input } from '@/components/ui/input';
     import { Label } from '@/components/ui/label';
     import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+    import { Textarea } from '@/components/ui/textarea';
+    import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
     import { useForm } from '@inertiajs/svelte';
-    import { Save, Settings } from 'lucide-svelte';
+    import { Save, Settings, Printer, RefreshCw } from 'lucide-svelte';
+    import { toast } from 'svelte-sonner';
+    import { QZTrayService } from '@/lib/utils/qztray';
 
     let { configs } = $props();
 
@@ -25,12 +29,47 @@
             clinica_direccion: configs.clinica_direccion || '',
             ticket_pie: configs.ticket_pie || '¡Gracias por su preferencia!',
             impresora_termica: configs.impresora_termica || '',
-            apis_net_pe_token: configs.apis_net_pe_token || '',
+            apis_peru_url: configs.apis_peru_url || 'https://dniruc.apisperu.com',
+            apis_peru_token: configs.apis_peru_token || '',
             whatsapp_api_url: configs.whatsapp_api_url || 'http://localhost:8080',
             whatsapp_api_key: configs.whatsapp_api_key || '',
             whatsapp_instance: configs.whatsapp_instance || 'clinica-dental',
+            qztray_cert_txt: configs.qztray_cert_txt || '',
+            qztray_private_key_pem: configs.qztray_private_key_pem || '',
+            sunat_ruc: configs.sunat_ruc || '',
+            sunat_razon_social: configs.sunat_razon_social || '',
+            sunat_sol_user: configs.sunat_sol_user || '',
+            sunat_sol_pass: configs.sunat_sol_pass || '',
+            sunat_cert_pem: configs.sunat_cert_pem || '',
+            sunat_environment: configs.sunat_environment || 'demo',
         }
     });
+
+    let availablePrinters = $state<string[]>(configs.impresora_termica ? [configs.impresora_termica] : []);
+    let isFetchingPrinters = $state(false);
+
+    async function fetchPrinters() {
+        isFetchingPrinters = true;
+        try {
+            availablePrinters = await QZTrayService.getPrinters();
+            toast.success(`Se encontraron ${availablePrinters.length} impresoras.`);
+        } catch (error) {
+            console.error('Error fetching printers', error);
+            toast.error('No se pudo conectar con QZ Tray. Asegúrate de que la aplicación esté ejecutándose localmente.');
+        } finally {
+            isFetchingPrinters = false;
+        }
+    }
+
+    async function handleFileUpload(e: Event, field: string) {
+        const input = e.target as HTMLInputElement;
+        if (input.files && input.files.length > 0) {
+            const file = input.files[0];
+            const text = await file.text();
+            (form.settings as any)[field] = text;
+            toast.success(`Archivo ${file.name} cargado correctamente.`);
+        }
+    }
 
     function submitForm(e: Event) {
         e.preventDefault();
@@ -85,10 +124,46 @@
                 <CardDescription>Configura los parámetros para impresoras térmicas locales.</CardDescription>
             </CardHeader>
             <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4 md:col-span-2">
+                    <div class="flex flex-col sm:flex-row gap-4 items-end">
+                        <div class="space-y-2 flex-1">
+                            <Label>Impresora Predeterminada</Label>
+                            <Select bind:value={form.settings.impresora_termica}>
+                                <SelectTrigger>
+                                    {form.settings.impresora_termica || 'Seleccionar Impresora...'}
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {#each availablePrinters as printer}
+                                        <SelectItem value={printer}>{printer}</SelectItem>
+                                    {/each}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <Button type="button" variant="outline" onclick={fetchPrinters} disabled={isFetchingPrinters}>
+                            {#if isFetchingPrinters}
+                                <RefreshCw class="h-4 w-4 mr-2 animate-spin" /> Buscando...
+                            {:else}
+                                <Printer class="h-4 w-4 mr-2" /> Buscar Impresoras
+                            {/if}
+                        </Button>
+                    </div>
+                </div>
+                
                 <div class="space-y-2 md:col-span-2">
-                    <Label>Nombre de Impresora Predeterminada</Label>
-                    <Input bind:value={form.settings.impresora_termica} placeholder="Ej: EPSON TM-T20III Receipt" />
-                    <p class="text-xs text-muted-foreground mt-1">Asegúrese de que el nombre coincida exactamente con el gestor de QZ Tray.</p>
+                    <Label>Certificado Digital (digital-certificate.txt)</Label>
+                    <div class="flex gap-2 mb-2">
+                        <Input type="file" accept=".txt" class="flex-1" onchange={(e) => handleFileUpload(e, 'qztray_cert_txt')} />
+                    </div>
+                    <Textarea bind:value={form.settings.qztray_cert_txt} placeholder="Pega aquí el contenido de digital-certificate.txt o sube el archivo arriba" class="h-24 font-mono text-xs" />
+                </div>
+                
+                <div class="space-y-2 md:col-span-2">
+                    <Label>Llave Privada (private-key.pem)</Label>
+                    <div class="flex gap-2 mb-2">
+                        <Input type="file" accept=".pem,.key,.txt" class="flex-1" onchange={(e) => handleFileUpload(e, 'qztray_private_key_pem')} />
+                    </div>
+                    <Textarea bind:value={form.settings.qztray_private_key_pem} placeholder="Pega aquí el contenido de private-key.pem o sube el archivo arriba" class="h-24 font-mono text-xs" />
+                    <p class="text-xs text-muted-foreground mt-1">Estos certificados permiten la impresión directa y silenciosa sin que QZ Tray muestre alertas de advertencia.</p>
                 </div>
                 <div class="space-y-2 md:col-span-2">
                     <Label>Mensaje al Pie del Ticket</Label>
@@ -97,17 +172,63 @@
             </CardContent>
         </Card>
 
-        <!-- Conexiones Externas (RENIEC) -->
+        <!-- Facturación Electrónica (SUNAT) -->
         <Card>
             <CardHeader>
-                <CardTitle>Conexiones Externas (RENIEC / SUNAT)</CardTitle>
-                <CardDescription>Credenciales para consultas automáticas de datos peruanos.</CardDescription>
+                <CardTitle>Facturación Electrónica (SUNAT Greenter)</CardTitle>
+                <CardDescription>Credenciales para emisión de comprobantes de pago (Boletas/Facturas).</CardDescription>
             </CardHeader>
-            <CardContent>
-                <div class="space-y-2 max-w-xl">
-                    <Label>Token de apis.net.pe (RENIEC/RUC)</Label>
-                    <Input bind:value={form.settings.apis_net_pe_token} type="password" />
-                    <p class="text-xs text-muted-foreground mt-1">Si dejas esto en blanco, el sistema operará en modo prueba local sin consultar a las bases de datos externas.</p>
+            <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <Label>RUC Emisor</Label>
+                    <Input bind:value={form.settings.sunat_ruc} placeholder="20000000000" />
+                </div>
+                <div class="space-y-2">
+                    <Label>Razón Social</Label>
+                    <Input bind:value={form.settings.sunat_razon_social} placeholder="MI CLINICA SAC" />
+                </div>
+                <div class="space-y-2">
+                    <Label>Entorno SUNAT</Label>
+                    <Select bind:value={form.settings.sunat_environment}>
+                        <SelectTrigger>{form.settings.sunat_environment === 'production' ? 'Producción' : 'Demo (Pruebas)'}</SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="demo">Demo (Pruebas)</SelectItem>
+                            <SelectItem value="production">Producción</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div class="space-y-2">
+                    <Label>Usuario SOL</Label>
+                    <Input bind:value={form.settings.sunat_sol_user} placeholder="MODDATOS" />
+                </div>
+                <div class="space-y-2">
+                    <Label>Clave SOL</Label>
+                    <Input bind:value={form.settings.sunat_sol_pass} type="password" placeholder="moddatos" />
+                </div>
+                <div class="space-y-2 md:col-span-2">
+                    <Label>Certificado Digital (.pem)</Label>
+                    <div class="flex gap-2 mb-2">
+                        <Input type="file" accept=".pem,.key,.txt" class="flex-1" onchange={(e) => handleFileUpload(e, 'sunat_cert_pem')} />
+                    </div>
+                    <Textarea bind:value={form.settings.sunat_cert_pem} placeholder="Pega aquí el contenido de tu certificado digital PEM para firma electrónica de XMLs" class="h-24 font-mono text-xs" />
+                </div>
+            </CardContent>
+        </Card>
+
+        <!-- Conexiones Externas (apisperu.com) -->
+        <Card>
+            <CardHeader>
+                <CardTitle>Conexiones Externas (apisperu.com)</CardTitle>
+                <CardDescription>Credenciales para consultas automáticas de DNI/RUC.</CardDescription>
+            </CardHeader>
+            <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <Label>URL Base de la API</Label>
+                    <Input bind:value={form.settings.apis_peru_url} placeholder="https://dniruc.apisperu.com" />
+                </div>
+                <div class="space-y-2">
+                    <Label>Token de Acceso</Label>
+                    <Input bind:value={form.settings.apis_peru_token} type="password" />
                 </div>
             </CardContent>
         </Card>

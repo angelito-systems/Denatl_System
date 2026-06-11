@@ -37,6 +37,8 @@
     let search = $state(filters?.search || '');
     let searchTimeout: ReturnType<typeof setTimeout>;
     let isUserModalOpen = $state(false);
+    let isDeleteModalOpen = $state(false);
+    let userToDelete = $state<number | null>(null);
 
     const userForm = useForm({
         id: null as number | null,
@@ -100,10 +102,18 @@
     }
 
     function deleteUser(id: number) {
-        if (confirm('¿Estás seguro de eliminar a este usuario?')) {
-            router.delete(`/staff/${id}`, {
+        userToDelete = id;
+        isDeleteModalOpen = true;
+    }
+
+    function confirmDelete() {
+        if (userToDelete !== null) {
+            router.delete(`/staff/${userToDelete}`, {
                 preserveScroll: true,
-                onSuccess: () => toast.success('Usuario eliminado')
+                onSuccess: () => {
+                    isDeleteModalOpen = false;
+                    toast.success('Usuario eliminado');
+                }
             });
         }
     }
@@ -206,41 +216,41 @@
         <DialogHeader>
             <DialogTitle class="flex items-center gap-2">
                 <UserCog class="w-5 h-5 text-blue-600" />
-                {$userForm.id ? 'Editar Usuario' : 'Nuevo Usuario'}
+                {userForm.id ? 'Editar Usuario' : 'Nuevo Usuario'}
             </DialogTitle>
         </DialogHeader>
         <form onsubmit={saveUser} class="space-y-4 py-4">
             <div class="space-y-2">
                 <Label>Nombres *</Label>
-                <Input bind:value={$userForm.first_name} placeholder="Ej: Juan" required />
+                <Input bind:value={userForm.first_name} placeholder="Ej: Juan" required />
             </div>
             <div class="space-y-2">
                 <Label>Apellidos *</Label>
-                <Input bind:value={$userForm.last_name} placeholder="Ej: Pérez" required />
+                <Input bind:value={userForm.last_name} placeholder="Ej: Pérez" required />
             </div>
             <div class="space-y-2">
                 <Label>Correo electrónico</Label>
-                <Input type="email" bind:value={$userForm.email} placeholder="ejemplo@clinica.com" />
+                <Input type="email" bind:value={userForm.email} placeholder="ejemplo@clinica.com" />
             </div>
             <div class="space-y-2">
                 <Label>Nombre de usuario (Login) *</Label>
-                <Input bind:value={$userForm.username} placeholder="Ej: jperez" required />
+                <Input bind:value={userForm.username} placeholder="Ej: jperez" required />
             </div>
             <div class="space-y-2">
                 <Label>Contraseña *</Label>
-                <Input type="password" bind:value={$userForm.password} required />
+                <Input type="password" bind:value={userForm.password} required />
             </div>
             <div class="space-y-2">
                 <Label>Rol del usuario *</Label>
-                <select class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" bind:value={$userForm.role}>
+                <select class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" bind:value={userForm.role}>
                     {#each roles as role}
                         <option value={role}>{role}</option>
                     {/each}
                 </select>
-                {#if $userForm.errors.role}<p class="text-xs text-red-500">{$userForm.errors.role}</p>{/if}
+                {#if userForm.errors.role}<p class="text-xs text-red-500">{userForm.errors.role}</p>{/if}
             </div>
             <div class="flex items-center space-x-2 pt-2">
-                <Checkbox id="is-active" bind:checked={$userForm.is_active} />
+                <Checkbox id="is-active" bind:checked={userForm.is_active} />
                 <Label for="is-active" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Usuario activo (puede iniciar sesión)
                 </Label>
@@ -249,14 +259,37 @@
                 <Button variant="outline" type="button" onclick={() => isUserModalOpen = false}>
                     ✕ Cancelar
                 </Button>
-                <Button type="submit" class="bg-blue-600 hover:bg-blue-700" disabled={$userForm.processing}>
-                    {#if $userForm.processing}
+                <Button type="submit" class="bg-blue-600 hover:bg-blue-700" disabled={userForm.processing}>
+                    {#if userForm.processing}
                         <Loader2 class="w-4 h-4 mr-2 animate-spin" /> Guardando...
                     {:else}
-                        <UserCog class="w-4 h-4 mr-2" /> {$userForm.id ? 'Actualizar' : 'Guardar'} usuario
+                        <UserCog class="w-4 h-4 mr-2" /> {userForm.id ? 'Actualizar' : 'Guardar'} usuario
                     {/if}
                 </Button>
             </div>
         </form>
+    </DialogContent>
+</Dialog>
+
+<!-- Modal Confirmar Eliminación -->
+<Dialog bind:open={isDeleteModalOpen}>
+    <DialogContent class="sm:max-w-[425px]">
+        <DialogHeader>
+            <DialogTitle class="flex items-center gap-2 text-red-600">
+                <Trash2 class="w-5 h-5" />
+                Eliminar Usuario
+            </DialogTitle>
+            <DialogDescription class="pt-2">
+                ¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer y el usuario perderá acceso al sistema inmediatamente.
+            </DialogDescription>
+        </DialogHeader>
+        <div class="flex justify-end gap-3 pt-4 mt-2">
+            <Button variant="outline" onclick={() => isDeleteModalOpen = false}>
+                Cancelar
+            </Button>
+            <Button variant="destructive" class="bg-red-600 hover:bg-red-700 text-white" onclick={confirmDelete}>
+                Sí, Eliminar
+            </Button>
+        </div>
     </DialogContent>
 </Dialog>

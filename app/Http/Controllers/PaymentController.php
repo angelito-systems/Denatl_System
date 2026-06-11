@@ -40,10 +40,25 @@ class PaymentController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StorePaymentRequest $request)
+    public function store(StorePaymentRequest $request, \App\Services\SunatService $sunatService)
     {
-        Payment::create($request->validated());
-        return redirect()->back()->with('success', 'Pago registrado exitosamente.');
+        $payment = Payment::create($request->validated());
+
+        $sunatStatus = '';
+        if (in_array($payment->receipt_type, ['Boleta', 'Factura'])) {
+            try {
+                $sunatService->emitirComprobante($payment);
+                $sunatStatus = ' y emitido a SUNAT correctamente';
+            } catch (\Exception $e) {
+                $sunatStatus = ' pero hubo un error con SUNAT: ' . $e->getMessage();
+            }
+        }
+
+        return redirect()->back()->with([
+            'success' => 'Pago registrado' . $sunatStatus . '.',
+            'new_payment_id' => $payment->id,
+            'auto_print' => true
+        ]);
     }
 
     /**
@@ -66,6 +81,37 @@ class PaymentController extends Controller
 
     public function downloadComprobante(Payment $payment, \App\Services\PdfGeneratorService $pdfService)
     {
-        return $pdfService->generarComprobante($payment)->download();
+        return $pdfService->generarComprobante($payment)->inline();
+    }
+
+    public function emitirSunat(Request $request, Payment $payment, \App\Services\SunatService $sunatService)
+    {
+        try {
+            // Permitir actualizar datos de facturación (RUC, Razón Social) antes de emitir
+            if ($request->has('billing_document') || $request->has('billing_name')) {
+                $payment->update([
+                    'billing_document' => $request->input('billing_document'),
+                    'billing_name' => $request->input('billing_name')
+                ]);
+            }
+
+            $sunatService->emitirComprobante($payment);
+            return redirect()->back()->with('success', 'Comprobante emitido y aceptado por SUNAT exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error SUNAT: ' . $e->getMessage());
+        }
+    }
+
+    public function downloadSunat(Payment $payment, $type)
+    {
+        if ($type === 'xml' && $payment->sunat_xml_path) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->download($payment->sunat_xml_path);
+        }
+        
+        if ($type === 'cdr' && $payment->sunat_cdr_path) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->download($payment->sunat_cdr_path);
+        }
+
+        abort(404, 'Archivo no encontrado');
     }
 }

@@ -20,10 +20,44 @@ export interface TicketData {
 
 export class QZTrayService {
     private static connected = false;
+    private static securityConfigured = false;
 
-    // Connect without certificate for local development
+    private static configureSecurity() {
+        if (this.securityConfigured) return;
+
+        // Force QZ Tray to use SHA512, which matches our Laravel backend
+        qz.security.setSignatureAlgorithm("SHA512");
+
+        qz.security.setCertificatePromise((resolve, reject) => {
+            fetch('/api/qztray/cert')
+                .then(res => {
+                    if (res.ok) return res.text();
+                    resolve(null); // Proceed without cert if not found
+                })
+                .then(resolve)
+                .catch(reject);
+        });
+
+        qz.security.setSignaturePromise(toSign => {
+            return (resolve, reject) => {
+                fetch('/api/qztray/sign?request=' + encodeURIComponent(toSign))
+                    .then(res => {
+                        if (res.ok) return res.text();
+                        reject(new Error('Firma fallida.'));
+                    })
+                    .then(text => resolve(text ? text.trim() : null))
+                    .catch(reject);
+            };
+        });
+
+        this.securityConfigured = true;
+    }
+
+    // Connect with certificates for local or remote
     static async connect() {
         if (this.connected) return;
+        
+        this.configureSecurity();
         
         try {
             await qz.websocket.connect();
@@ -75,6 +109,30 @@ export class QZTrayService {
             console.log("Print job sent to", impresora);
         } catch (e) {
             console.error("Print failed", e);
+            throw e;
+        }
+    }
+
+    // Print a PDF file directly via URL
+    static async imprimirPdf(impresora: string, pdfUrl: string) {
+        await this.connect();
+        
+        const config = qz.configs.create(impresora);
+        
+        const printData = [
+            {
+                type: 'pixel',
+                format: 'pdf',
+                flavor: 'file',
+                data: pdfUrl
+            }
+        ];
+        
+        try {
+            await qz.print(config, printData);
+            console.log("PDF Print job sent to", impresora);
+        } catch (e) {
+            console.error("PDF Print failed", e);
             throw e;
         }
     }

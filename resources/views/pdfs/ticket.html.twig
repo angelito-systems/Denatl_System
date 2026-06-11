@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 11px;
+            width: 100%;
+            color: #000;
+            background: #fff;
+            padding: 6px 8px;
+        }
+
+        .ticket { width: 100%; text-align: center; }
+
+        /* ── Logo ── */
+        .logo-wrap { margin-bottom: 3px; }
+        .logo { max-width: 90px; max-height: 55px; }
+
+        /* ── Encabezado empresa ── */
+        .empresa-razon {
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 2px 0 1px;
+        }
+        .empresa-nombre {
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 1px 0;
+        }
+        .empresa-ruc {
+            font-size: 10px;
+            font-weight: bold;
+            margin: 1px 0;
+        }
+        .empresa-dato { font-size: 10px; margin: 1px 0; }
+
+        /* ── Separadores ── */
+        .line-solid  { border-top: 1px solid  #000; margin: 5px 0; }
+        .line-dashed { border-top: 1px dashed #000; margin: 4px 0; }
+
+        /* ── Tipo comprobante ── */
+        .tipo-comprobante {
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            margin: 4px 0 2px;
+            line-height: 1.4;
+        }
+        .tipo-numero {
+            font-size: 13px;
+            font-weight: bold;
+            text-align: center;
+            margin: 1px 0 4px;
+        }
+
+        /* ── Cliente ── */
+        .cliente-nombre {
+            font-size: 11px;
+            text-align: center;
+            margin: 3px 0 1px;
+        }
+        .cliente-sep {
+            font-size: 10px;
+            text-align: center;
+            color: #333;
+            margin: 1px 0;
+        }
+        .cliente-doc {
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+            margin: 1px 0 3px;
+        }
+
+        /* ── Fecha ── */
+        .fecha-row {
+            text-align: left;
+            font-size: 10.5px;
+            font-weight: bold;
+            margin: 3px 0;
+        }
+
+        /* ── Tabla items ── */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+            margin: 3px 0;
+        }
+        .table thead tr {
+            border-bottom: 1px solid #000;
+        }
+        .table th {
+            padding: 2px 1px;
+            font-weight: bold;
+            text-align: left;
+            font-size: 10px;
+        }
+        .table th.r, .table td.r { text-align: right; }
+        .table td {
+            padding: 2px 1px;
+            vertical-align: top;
+        }
+        .table tbody tr {
+            border-bottom: 1px dashed #ccc;
+        }
+        .col-cant  { width: 44px; }
+        .col-cod   { width: 60px; }
+        .col-precio{ width: 38px; text-align: right; }
+        .col-total { width: 38px; text-align: right; }
+        .col-desc  { }
+
+        .item-desc {
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        /* ── Totales ── */
+        .totals {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 3px 0;
+            font-size: 11px;
+        }
+        .totals td { padding: 2px 1px; }
+        .totals .lbl { text-align: left; font-weight: bold; }
+        .totals .val { text-align: right; }
+        .grand-row td {
+            font-size: 15px;
+            font-weight: bold;
+            padding-top: 3px;
+        }
+        .grand-row .lbl-grand { text-align: left; }
+        .grand-row .val-grand { text-align: right; }
+
+        /* ── Son / leyenda ── */
+        .son { font-size: 10px; text-align: left; margin: 3px 0; }
+        .son strong { font-weight: bold; }
+
+        /* ── Info extra (forma pago, etc.) ── */
+        .extra-row { font-size: 10px; text-align: left; margin: 1px 0; }
+        .extra-row strong { font-weight: bold; }
+
+        /* ── QR ── */
+        .qr-section { margin: 6px 0 2px; text-align: center; }
+        .qr-section img { width: 100px; height: 100px; display: block; margin: 0 auto; }
+
+        /* ── Footer ── */
+        .footer { font-size: 9.5px; text-align: center; margin-top: 5px; line-height: 1.5; }
+
+        /* ── Estado SUNAT ── */
+        .estado-pendiente { font-size: 9px; color: #666; text-align: center; margin: 2px 0; }
+    </style>
+</head>
+<body>
+<div class="ticket">
+
+    {# ── Logo ── #}
+    {% if params.system.logo %}
+    <div class="logo-wrap">
+        <img src="data:image/png;base64,{{ params.system.logo }}" class="logo" alt="Logo">
+    </div>
+    {% endif %}
+
+    {# ── Empresa ── #}
+    <div class="empresa-razon">{{ doc.company.razonSocial }}</div>
+    {% if doc.company.nombreComercial and doc.company.nombreComercial != doc.company.razonSocial %}
+        <div class="empresa-nombre">{{ doc.company.nombreComercial }}</div>
+    {% endif %}
+    <div class="empresa-ruc">RUC: {{ doc.company.ruc }}</div>
+    <div class="empresa-dato">{{ doc.company.address.direccion }}</div>
+    {% if params.user is defined and params.user.header is defined and params.user.header %}
+        <div class="empresa-dato">{{ params.user.header|raw }}</div>
+    {% endif %}
+
+    <div class="line-solid"></div>
+
+    {# ── Tipo y número ── #}
+    <div class="tipo-comprobante">
+        {% if doc.tipoDoc == '01' %}FACTURA DE VENTA ELECTRÓNICA
+        {% elseif doc.tipoDoc == '03' %}BOLETA DE VENTA ELECTRÓNICA
+        {% elseif doc.tipoDoc == '07' %}NOTA DE CRÉDITO ELECTRÓNICA
+        {% elseif doc.tipoDoc == '08' %}NOTA DE DÉBITO ELECTRÓNICA
+        {% else %}TICKET DE PAGO INTERNO
+        {% endif %}
+    </div>
+    <div class="tipo-numero">{{ doc.serie }}-{{ doc.correlativo }}</div>
+
+    <div class="line-solid"></div>
+
+    {# ── Cliente ── #}
+    <div class="cliente-nombre">{{ doc.client.rznSocial }}</div>
+    <div class="cliente-sep">---</div>
+    {% if doc.client.numDoc and doc.client.numDoc != '00000000' %}
+        <div class="cliente-doc">
+            {% if doc.client.tipoDoc == '6' %}RUC{% elseif doc.client.tipoDoc == '1' %}DNI{% else %}DOC{% endif %}
+            {{ doc.client.numDoc }}
+        </div>
+    {% endif %}
+
+    {# ── Fecha ── #}
+    <div class="line-dashed"></div>
+    <div class="fecha-row">
+        FECHA: {{ doc.fechaEmision|date('d/m/Y') }} &nbsp; HORA: {{ doc.fechaEmision|date('h:i A') }}
+    </div>
+    <div class="line-dashed"></div>
+
+    {# ── Tabla items ── #}
+    <table class="table">
+        <thead>
+            <tr>
+                <th class="col-cant">Cant U.M</th>
+                <th class="col-cod">COD</th>
+                <th class="col-precio r">PRECIO</th>
+                <th class="col-total r">TOTAL</th>
+            </tr>
+            <tr>
+                <th colspan="4" style="font-weight:bold;padding-bottom:2px;">DESCRIPCION</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for det in doc.details %}
+            <tr>
+                <td class="col-cant">{{ det.cantidad|number_format(0) }} {{ det.unidad }}</td>
+                <td class="col-cod">{{ det.codProducto }}</td>
+                <td class="col-precio r">{{ det.mtoPrecioUnitario|number_format(2) }}</td>
+                <td class="col-total r">{{ (det.mtoValorVenta + det.igv)|number_format(2) }}</td>
+            </tr>
+            <tr>
+                <td colspan="4" class="item-desc">{{ det.descripcion }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="line-solid"></div>
+
+    {# ── Totales ── #}
+    <table class="totals">
+        {% if doc.mtoOperGravadas %}
+        <tr>
+            <td class="lbl">TOTAL GRAVADO</td>
+            <td class="val">(S/)&nbsp; {{ doc.mtoOperGravadas|number_format(2) }}</td>
+        </tr>
+        {% endif %}
+        {% if doc.mtoOperExoneradas is defined and doc.mtoOperExoneradas %}
+        <tr>
+            <td class="lbl">TOTAL EXONERADO</td>
+            <td class="val">(S/)&nbsp; {{ doc.mtoOperExoneradas|number_format(2) }}</td>
+        </tr>
+        {% endif %}
+        {% if doc.mtoOperInafectas is defined and doc.mtoOperInafectas %}
+        <tr>
+            <td class="lbl">TOTAL INAFECTO</td>
+            <td class="val">(S/)&nbsp; {{ doc.mtoOperInafectas|number_format(2) }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td class="lbl">I.G.V</td>
+            <td class="val">(S/)&nbsp; {{ doc.mtoIGV|number_format(2) }}</td>
+        </tr>
+    </table>
+
+    <div class="line-solid"></div>
+
+    <table class="totals">
+        <tr class="grand-row">
+            <td class="lbl-grand">TOTAL</td>
+            <td class="val-grand">(S/)&nbsp; {{ doc.mtoImpVenta|number_format(2) }}</td>
+        </tr>
+    </table>
+
+    <div class="line-solid"></div>
+
+    {# ── Son (monto en letras) ── #}
+    {% for leg in doc.legends %}
+        {% if leg.code == '1000' %}
+        <div class="son"><strong>SON:</strong> {{ leg.value }}</div>
+        {% endif %}
+    {% endfor %}
+
+    {# ── Forma de pago / extras ── #}
+    {% if params.user is defined and params.user.extras is defined %}
+        {% for item in params.user.extras %}
+        <div class="extra-row"><strong>{{ item.name }}:</strong> {{ item.value }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {# ── Nota de referencia ── #}
+    {% if doc.tipoDoc in ['07','08'] and doc.numDocfectado is defined %}
+    <div class="extra-row"><strong>Doc. Afectado:</strong> {{ doc.numDocfectado }}</div>
+    {% if doc.desMotivo is defined %}
+    <div class="extra-row"><strong>Motivo:</strong> {{ doc.desMotivo }}</div>
+    {% endif %}
+    {% endif %}
+
+    {# ── Observaciones ── #}
+    {% if params.user is defined and params.user.footer is defined and params.user.footer %}
+    <div class="extra-row"><strong>Observaciones:</strong></div>
+    <div class="extra-row">{{ params.user.footer|raw }}</div>
+    {% else %}
+    <div class="extra-row"><strong>Observaciones:</strong></div>
+    {% endif %}
+
+    {# ── QR ── #}
+    {% if params.system.qr %}
+    <div class="qr-section">
+        <img src="data:image/svg+xml;base64,{{ params.system.qr }}" alt="QR SUNAT">
+    </div>
+    {% endif %}
+
+    {# ── Estado SUNAT ── #}
+    {% if params.system.sunat_status == 'Rechazado' %}
+        <div style="font-size:9px;color:#cc0000;text-align:center;margin:2px 0;">
+            ✗ RECHAZADO: {{ params.system.sunat_message }}
+        </div>
+    {% elseif params.system.sunat_status != 'Aceptado' and doc.tipoDoc in ['01','03','07','08'] %}
+        <div class="estado-pendiente">⏳ Pendiente de envío a SUNAT</div>
+    {% endif %}
+
+    {# ── Footer ── #}
+    <div class="line-dashed"></div>
+    <div class="footer">
+        Representación Impresa de la
+        {% if doc.tipoDoc == '01' %}FACTURA
+        {% elseif doc.tipoDoc == '03' %}BOLETA DE VENTA
+        {% elseif doc.tipoDoc == '07' %}NOTA DE CRÉDITO
+        {% elseif doc.tipoDoc == '08' %}NOTA DE DÉBITO
+        {% else %}COMPROBANTE
+        {% endif %}
+        ELECTRÓNICA.<br>
+        Puede consultar en: ww1.sunat.gob.pe
+    </div>
+
+</div>
+</body>
+</html>

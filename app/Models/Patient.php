@@ -63,4 +63,14 @@ class Patient extends Model implements HasMedia
     {
         return $this->hasMany(Document::class);
     }
+
+    public function treatments()
+    {
+        return $this->hasMany(Treatment::class);
+    }
+
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class);
+    }
 }

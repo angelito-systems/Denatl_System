@@ -1,7 +1,6 @@
 <script lang="ts">
     import { Button } from '@/components/ui/button';
     import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-    import { FileText, Trash2, Download, Plus, MessageCircle, FileUp, Loader2 } from 'lucide-svelte';
     import { FileText, Trash2, Download, Plus, MessageCircle, FileUp, Loader2, PenTool } from 'lucide-svelte';
     import { useForm, router } from '@inertiajs/svelte';
     import { Input } from '@/components/ui/input';
@@ -151,12 +150,13 @@
         isSignatureModalOpen = true;
     }
 
-    function handleSign(signatureBase64: string) {
+    function handleSign(signatureClient: string, signatureAdmin: string) {
         if (!documentToSign) return;
 
         toast.loading('Generando PDF firmado...', { id: 'sign-toast' });
         router.post(`/documents/${documentToSign.id}/sign`, {
-            signature: signatureBase64
+            signature: signatureClient,
+            admin_signature: signatureAdmin
         }, {
             preserveScroll: true,
             onSuccess: () => {
@@ -228,7 +228,7 @@
             </div>
         </CardHeader>
         <CardContent class="p-0">
-            {#if patient.media && patient.media.length > 0}
+            {#if patient.documents && patient.documents.length > 0}
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-muted-foreground uppercase bg-slate-50 border-b">
@@ -357,4 +357,11 @@
     bind:isOpen={isPdfViewerOpen} 
     url={pdfViewerUrl} 
     title={pdfViewerTitle} 
+/>
+
+<!-- Modal para Firmar Documento -->
+<SignaturePadModal 
+    bind:isOpen={isSignatureModalOpen} 
+    documentName={documentToSign?.name || 'Documento'}
+    onSign={handleSign}
 />

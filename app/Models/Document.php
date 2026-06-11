@@ -17,7 +17,8 @@ class Document extends Model implements HasMedia
         'name',
         'status',
         'signed_at',
-        'signature'
+        'signature',
+        'admin_signature'
     ];
 
     protected $casts = [

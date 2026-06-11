@@ -39,11 +39,21 @@
 
 <div class="firmas">
     <div class="firma">
+        @if(isset($adminSignature) && $adminSignature)
+            <img src="{{ $adminSignature }}" alt="Firma Clínica" style="max-height: 80px; margin-bottom: -15px;">
+        @else
+            <br><br><br>
+        @endif
         <div class="linea"></div>
         LA CLÍNICA<br>
         {{ $clinica['nombre'] }}
     </div>
     <div class="firma">
+        @if(isset($signature) && $signature)
+            <img src="{{ $signature }}" alt="Firma Paciente" style="max-height: 80px; margin-bottom: -15px;">
+        @else
+            <br><br><br>
+        @endif
         <div class="linea"></div>
         EL PACIENTE<br>
         {{ $paciente->first_name }} {{ $paciente->last_name }}<br>

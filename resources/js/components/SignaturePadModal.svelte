@@ -1,12 +1,12 @@
 <script lang="ts">
     import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
     import { Button } from '@/components/ui/button';
-    import { PenLine, Eraser, Check } from 'lucide-svelte';
+    import { PenLine, Eraser, Check, ArrowRight } from 'lucide-svelte';
     import { onMount } from 'svelte';
 
     let { 
         isOpen = $bindable(false), 
-        title = 'Firma Digital',
+        documentName = 'Documento',
         onSign
     } = $props();
 
@@ -14,6 +14,10 @@
     let ctx: CanvasRenderingContext2D | null;
     let isDrawing = false;
     let hasSignature = $state(false);
+    
+    let step = $state(1); // 1 = Paciente, 2 = Clínica
+    let signatureClient = $state('');
+    let signatureAdmin = $state('');
 
     onMount(() => {
         if (isOpen && canvas) {
@@ -25,6 +29,13 @@
         if (isOpen && canvas && !ctx) {
             setTimeout(initCanvas, 100);
         }
+        if (!isOpen) {
+            // Reset when closed
+            step = 1;
+            signatureClient = '';
+            signatureAdmin = '';
+            hasSignature = false;
+        }
     });
 
     function initCanvas() {
@@ -32,7 +43,6 @@
         ctx = canvas.getContext('2d');
         if (!ctx) return;
         
-        // Ajustar tamaño real vs renderizado para evitar borrosidad
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
@@ -40,7 +50,7 @@
         ctx.lineWidth = 3;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.strokeStyle = '#0f172a'; // slate-900
+        ctx.strokeStyle = '#0f172a';
     }
 
     function startDrawing(e: MouseEvent | TouchEvent) {
@@ -55,7 +65,7 @@
 
     function draw(e: MouseEvent | TouchEvent) {
         if (!isDrawing || !ctx) return;
-        e.preventDefault(); // Prevenir scroll en móviles
+        e.preventDefault();
         
         const { x, y } = getCoordinates(e);
         ctx.lineTo(x, y);
@@ -92,12 +102,18 @@
         hasSignature = false;
     }
 
+    function nextStep() {
+        if (!canvas || !hasSignature) return;
+        signatureClient = canvas.toDataURL('image/png');
+        step = 2;
+        clear();
+    }
+
     function confirm() {
         if (!canvas || !hasSignature) return;
-        // Obtener la firma en base64
-        const dataUrl = canvas.toDataURL('image/png');
+        signatureAdmin = canvas.toDataURL('image/png');
         if (onSign) {
-            onSign(dataUrl);
+            onSign(signatureClient, signatureAdmin);
         }
     }
 </script>
@@ -107,10 +123,12 @@
         <DialogHeader>
             <DialogTitle class="flex items-center gap-2">
                 <PenLine class="w-5 h-5" />
-                {title}
+                {step === 1 ? 'Firma del Paciente' : 'Firma de la Clínica (Admin)'}
             </DialogTitle>
             <DialogDescription>
-                Por favor, dibuje su firma en el recuadro inferior.
+                {step === 1 
+                    ? `Por favor, pida al paciente que firme para el documento: ${documentName}.` 
+                    : `Por favor, firme como representante de la clínica para el documento: ${documentName}.`}
             </DialogDescription>
         </DialogHeader>
 
@@ -140,10 +158,16 @@
                 Limpiar
             </Button>
             
-            <Button onclick={confirm} disabled={!hasSignature} type="button">
-                <Check class="w-4 h-4 mr-2" />
-                Confirmar Firma
-            </Button>
+            {#if step === 1}
+                <Button onclick={nextStep} disabled={!hasSignature} type="button" class="bg-blue-600 hover:bg-blue-700">
+                    Siguiente <ArrowRight class="w-4 h-4 ml-2" />
+                </Button>
+            {:else}
+                <Button onclick={confirm} disabled={!hasSignature} type="button" class="bg-indigo-600 hover:bg-indigo-700 text-white">
+                    <Check class="w-4 h-4 mr-2" />
+                    Finalizar Firmas
+                </Button>
+            {/if}
         </div>
     </DialogContent>
 </Dialog>
