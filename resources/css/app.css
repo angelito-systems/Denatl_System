@@ -1,11 +1,14 @@
 @import 'tailwindcss';
-
 @import 'tw-animate-css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant data-active (&[data-state=active]);
+@custom-variant data-inactive (&[data-state=inactive]);
+@custom-variant data-closed (&[data-state=closed]);
+@custom-variant data-open (&[data-state=open]);
 
 @theme inline {
     --font-sans:
@@ -90,76 +93,108 @@
 }
 
 :root {
-    --background: hsl(0 0% 100%);
-    --foreground: hsl(0 0% 3.9%);
+    /* Colores base - Sistema Dental */
+    --background: hsl(210 40% 98%);
+    --foreground: hsl(222.2 84% 4.9%);
+    
     --card: hsl(0 0% 100%);
-    --card-foreground: hsl(0 0% 3.9%);
+    --card-foreground: hsl(222.2 84% 4.9%);
+    
     --popover: hsl(0 0% 100%);
-    --popover-foreground: hsl(0 0% 3.9%);
-    --primary: hsl(0 0% 9%);
-    --primary-foreground: hsl(0 0% 98%);
-    --secondary: hsl(0 0% 92.1%);
-    --secondary-foreground: hsl(0 0% 9%);
-    --muted: hsl(0 0% 96.1%);
-    --muted-foreground: hsl(0 0% 45.1%);
-    --accent: hsl(0 0% 96.1%);
-    --accent-foreground: hsl(0 0% 9%);
+    --popover-foreground: hsl(222.2 84% 4.9%);
+    
+    /* Primary: Azul médico/dental */
+    --primary: hsl(199 89% 48%);
+    --primary-foreground: hsl(210 40% 98%);
+    
+    /* Secondary: Cyan claro para acentos */
+    --secondary: hsl(187 100% 42%);
+    --secondary-foreground: hsl(222.2 47.4% 11.2%);
+    
+    /* Muted: Grises suaves */
+    --muted: hsl(210 40% 96.1%);
+    --muted-foreground: hsl(215.4 16.3% 46.9%);
+    
+    /* Accent: Verde salud/sanidad */
+    --accent: hsl(142 76% 36%);
+    --accent-foreground: hsl(210 40% 98%);
+    
     --destructive: hsl(0 84.2% 60.2%);
-    --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(0 0% 92.8%);
-    --input: hsl(0 0% 89.8%);
-    --ring: hsl(0 0% 3.9%);
-    --chart-1: hsl(12 76% 61%);
-    --chart-2: hsl(173 58% 39%);
-    --chart-3: hsl(197 37% 24%);
-    --chart-4: hsl(43 74% 66%);
-    --chart-5: hsl(27 87% 67%);
-    --radius: 0.5rem;
-    --sidebar-background: hsl(0 0% 98%);
-    --sidebar-foreground: hsl(240 5.3% 26.1%);
-    --sidebar-primary: hsl(0 0% 10%);
-    --sidebar-primary-foreground: hsl(0 0% 98%);
-    --sidebar-accent: hsl(0 0% 94%);
-    --sidebar-accent-foreground: hsl(0 0% 30%);
-    --sidebar-border: hsl(0 0% 91%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(0 0% 98%);
+    --destructive-foreground: hsl(210 40% 98%);
+    
+    --border: hsl(214.3 31.8% 91.4%);
+    --input: hsl(214.3 31.8% 91.4%);
+    --ring: hsl(199 89% 48%);
+    
+    /* Colores para gráficos odontológicos */
+    --chart-1: hsl(199 89% 48%);   /* Azul dental */
+    --chart-2: hsl(142 76% 36%);   /* Verde salud */
+    --chart-3: hsl(187 100% 42%);  /* Cyan */
+    --chart-4: hsl(271 91% 65%);   /* Púrpura */
+    --chart-5: hsl(24 95% 53%);    /* Naranja */
+    
+    --radius: 0.75rem;
+    
+    /* Sidebar - Tema médico */
+    --sidebar-background: hsl(0 0% 100%);
+    --sidebar-foreground: hsl(222.2 84% 4.9%);
+    --sidebar-primary: hsl(199 89% 48%);
+    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-accent: hsl(210 40% 96.1%);
+    --sidebar-accent-foreground: hsl(222.2 47.4% 11.2%);
+    --sidebar-border: hsl(214.3 31.8% 91.4%);
+    --sidebar-ring: hsl(199 89% 48%);
 }
 
 .dark {
-    --background: hsl(0 0% 3.9%);
-    --foreground: hsl(0 0% 98%);
-    --card: hsl(0 0% 3.9%);
-    --card-foreground: hsl(0 0% 98%);
-    --popover: hsl(0 0% 3.9%);
-    --popover-foreground: hsl(0 0% 98%);
-    --primary: hsl(0 0% 98%);
-    --primary-foreground: hsl(0 0% 9%);
-    --secondary: hsl(0 0% 14.9%);
-    --secondary-foreground: hsl(0 0% 98%);
-    --muted: hsl(0 0% 16.08%);
-    --muted-foreground: hsl(0 0% 63.9%);
-    --accent: hsl(0 0% 14.9%);
-    --accent-foreground: hsl(0 0% 98%);
-    --destructive: hsl(0 84% 60%);
-    --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(0 0% 14.9%);
-    --input: hsl(0 0% 14.9%);
-    --ring: hsl(0 0% 83.1%);
-    --chart-1: hsl(220 70% 50%);
-    --chart-2: hsl(160 60% 45%);
-    --chart-3: hsl(30 80% 55%);
-    --chart-4: hsl(280 65% 60%);
-    --chart-5: hsl(340 75% 55%);
-    --sidebar-background: hsl(0 0% 7%);
-    --sidebar-foreground: hsl(0 0% 95.9%);
-    --sidebar-primary: hsl(360, 100%, 100%);
+    /* Modo oscuro - Sistema Dental */
+    --background: hsl(222.2 84% 4.9%);
+    --foreground: hsl(210 40% 98%);
+    
+    --card: hsl(222.2 84% 4.9%);
+    --card-foreground: hsl(210 40% 98%);
+    
+    --popover: hsl(222.2 84% 4.9%);
+    --popover-foreground: hsl(210 40% 98%);
+    
+    /* Primary: Azul más brillante para dark mode */
+    --primary: hsl(199 89% 60%);
+    --primary-foreground: hsl(222.2 47.4% 11.2%);
+    
+    /* Secondary: Cyan para dark */
+    --secondary: hsl(187 100% 50%);
+    --secondary-foreground: hsl(222.2 47.4% 11.2%);
+    
+    --muted: hsl(217.2 32.6% 17.5%);
+    --muted-foreground: hsl(215 20.2% 65.1%);
+    
+    /* Accent: Verde salud más brillante */
+    --accent: hsl(142 76% 45%);
+    --accent-foreground: hsl(210 40% 98%);
+    
+    --destructive: hsl(0 62.8% 30.6%);
+    --destructive-foreground: hsl(210 40% 98%);
+    
+    --border: hsl(217.2 32.6% 17.5%);
+    --input: hsl(217.2 32.6% 17.5%);
+    --ring: hsl(199 89% 60%);
+    
+    /* Colores para gráficos en dark mode */
+    --chart-1: hsl(199 89% 60%);
+    --chart-2: hsl(142 76% 45%);
+    --chart-3: hsl(187 100% 50%);
+    --chart-4: hsl(271 91% 70%);
+    --chart-5: hsl(24 95% 60%);
+    
+    /* Sidebar - Dark mode médico */
+    --sidebar-background: hsl(222.2 84% 4.9%);
+    --sidebar-foreground: hsl(210 40% 98%);
+    --sidebar-primary: hsl(199 89% 60%);
     --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(0 0% 15.9%);
-    --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-    --sidebar-border: hsl(0 0% 15.9%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(240 5.9% 10%);
+    --sidebar-accent: hsl(217.2 32.6% 17.5%);
+    --sidebar-accent-foreground: hsl(210 40% 98%);
+    --sidebar-border: hsl(217.2 32.6% 17.5%);
+    --sidebar-ring: hsl(199 89% 60%);
 }
 
 @layer base {
@@ -168,5 +203,20 @@
     }
     body {
         @apply bg-background text-foreground;
+    }
+    
+    /* Estilos específicos para sistema dental */
+    .dental-gradient {
+        background: linear-gradient(135deg, hsl(199 89% 48%) 0%, hsl(187 100% 42%) 100%);
+    }
+    
+    .dental-card-hover {
+        @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+    }
+    
+    /* Mejoras de accesibilidad para el consultorio */
+    button:focus-visible,
+    a:focus-visible {
+        @apply ring-2 ring-primary ring-offset-2 ring-offset-background;
     }
 }
