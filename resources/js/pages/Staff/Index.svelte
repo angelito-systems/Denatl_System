@@ -29,8 +29,9 @@
     } from '@/components/ui/dialog';
     import { router, useForm } from '@inertiajs/svelte';
     import { index } from '@/routes/staff';
-    import { Search, Plus, UserCog, Trash2, Edit, Loader2 } from 'lucide-svelte';
+    import { Search, Plus, UserCog, Trash2, Edit, Loader2, CalendarClock } from 'lucide-svelte';
     import { toast } from 'svelte-sonner';
+    import ScheduleModal from '@/components/ScheduleModal.svelte';
 
     let { users, roles, filters } = $props();
 
@@ -38,7 +39,9 @@
     let searchTimeout: ReturnType<typeof setTimeout>;
     let isUserModalOpen = $state(false);
     let isDeleteModalOpen = $state(false);
+    let isScheduleModalOpen = $state(false);
     let userToDelete = $state<number | null>(null);
+    let selectedUserForSchedule = $state<any>(null);
 
     const userForm = useForm({
         id: null as number | null,
@@ -48,8 +51,38 @@
         username: '',
         password: '',
         role: 'Administrador',
+        room: '',
+        dni: '',
+        cmp: '',
         is_active: true
     });
+
+    let isSearchingDni = $state(false);
+
+    async function searchDni() {
+        if (!userForm.dni || userForm.dni.length !== 8) {
+            toast.error('El DNI debe tener 8 dígitos');
+            return;
+        }
+
+        isSearchingDni = true;
+        try {
+            const res = await fetch(`/api/reniec/${userForm.dni}`);
+            const data = await res.json();
+            
+            if (data.success && data.data) {
+                userForm.first_name = data.data.nombres;
+                userForm.last_name = `${data.data.apellido_paterno} ${data.data.apellido_materno}`;
+                toast.success('Datos obtenidos correctamente');
+            } else {
+                toast.error(data.message || 'No se encontraron resultados');
+            }
+        } catch (e) {
+            toast.error('Error al conectar con el servicio RENIEC');
+        } finally {
+            isSearchingDni = false;
+        }
+    }
 
     function handleSearch() {
         clearTimeout(searchTimeout);
@@ -63,6 +96,9 @@
         userForm.id = null;
         userForm.is_active = true;
         userForm.role = 'Administrador';
+        userForm.room = '';
+        userForm.dni = '';
+        userForm.cmp = '';
         isUserModalOpen = true;
     }
 
@@ -97,8 +133,16 @@
         userForm.username = user.username;
         userForm.password = ''; // Don't show password, only edit if filled
         userForm.role = user.roles && user.roles.length > 0 ? user.roles[0].name : 'Dentista';
+        userForm.room = user.room || '';
+        userForm.dni = user.dni || '';
+        userForm.cmp = user.cmp || '';
         userForm.is_active = user.is_active;
         isUserModalOpen = true;
+    }
+
+    function editSchedule(user: any) {
+        selectedUserForSchedule = user;
+        isScheduleModalOpen = true;
     }
 
     function deleteUser(id: number) {
@@ -166,7 +210,7 @@
                     </TableRow>
                 {:else}
                     {#each users.data as user}
-                        <TableRow class="hover:bg-muted/50 cursor-pointer">
+                        <TableRow class="hover:bg-muted/50 cursor-pointer" ondblclick={() => editUser(user)}>
                             <TableCell class="font-medium">
                                 <div class="flex items-center gap-2">
                                     <div class="h-8 w-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold">
@@ -192,6 +236,9 @@
                             </TableCell>
                             <TableCell class="text-right">
                                 <div class="flex items-center justify-end gap-1">
+                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50" onclick={() => editSchedule(user)} title="Horario">
+                                        <CalendarClock class="h-4 w-4" />
+                                    </Button>
                                     <Button variant="ghost" size="icon" class="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onclick={() => editUser(user)} title="Editar">
                                         <Edit class="h-4 w-4" />
                                     </Button>
@@ -212,44 +259,76 @@
 </div>
 
 <Dialog bind:open={isUserModalOpen}>
-    <DialogContent class="sm:max-w-[425px]">
+    <DialogContent class="sm:max-w-[600px]">
         <DialogHeader>
             <DialogTitle class="flex items-center gap-2">
                 <UserCog class="w-5 h-5 text-blue-600" />
                 {userForm.id ? 'Editar Usuario' : 'Nuevo Usuario'}
             </DialogTitle>
         </DialogHeader>
-        <form onsubmit={saveUser} class="space-y-4 py-4">
-            <div class="space-y-2">
-                <Label>Nombres *</Label>
-                <Input bind:value={userForm.first_name} placeholder="Ej: Juan" required />
+        <form onsubmit={saveUser} class="py-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2 col-span-2 md:col-span-1">
+                    <Label>DNI</Label>
+                    <div class="flex items-center gap-2">
+                        <Input bind:value={userForm.dni} placeholder="Ej: 12345678" maxlength="8" />
+                        <Button type="button" variant="secondary" onclick={searchDni} disabled={isSearchingDni}>
+                            {#if isSearchingDni}
+                                <Loader2 class="h-4 w-4 animate-spin" />
+                            {:else}
+                                <Search class="h-4 w-4" />
+                            {/if}
+                        </Button>
+                    </div>
+                    {#if userForm.errors.dni}<p class="text-xs text-red-500">{userForm.errors.dni}</p>{/if}
+                </div>
+                <div class="space-y-2 col-span-2 md:col-span-1">
+                    <Label>Nombres *</Label>
+                    <Input bind:value={userForm.first_name} placeholder="Ej: Juan" required />
+                    {#if userForm.errors.first_name}<p class="text-xs text-red-500">{userForm.errors.first_name}</p>{/if}
+                </div>
+                <div class="space-y-2">
+                    <Label>Apellidos *</Label>
+                    <Input bind:value={userForm.last_name} placeholder="Ej: Pérez" required />
+                    {#if userForm.errors.last_name}<p class="text-xs text-red-500">{userForm.errors.last_name}</p>{/if}
+                </div>
+                <div class="space-y-2">
+                    <Label>Correo electrónico *</Label>
+                    <Input type="email" bind:value={userForm.email} placeholder="ejemplo@clinica.com" required />
+                    {#if userForm.errors.email}<p class="text-xs text-red-500">{userForm.errors.email}</p>{/if}
+                </div>
+                <div class="space-y-2">
+                    <Label>Nombre de usuario (Login) *</Label>
+                    <Input bind:value={userForm.username} placeholder="Ej: jperez" required />
+                    {#if userForm.errors.username}<p class="text-xs text-red-500">{userForm.errors.username}</p>{/if}
+                </div>
+                <div class="space-y-2">
+                    <Label>Contraseña *</Label>
+                    <Input type="password" bind:value={userForm.password} required={!userForm.id} placeholder={userForm.id ? "Dejar en blanco para no cambiar" : ""} />
+                    {#if userForm.errors.password}<p class="text-xs text-red-500">{userForm.errors.password}</p>{/if}
+                </div>
+                <div class="space-y-2">
+                    <Label>Rol del usuario *</Label>
+                    <select class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" bind:value={userForm.role}>
+                        {#each roles as role}
+                            <option value={role}>{role}</option>
+                        {/each}
+                    </select>
+                    {#if userForm.errors.role}<p class="text-xs text-red-500">{userForm.errors.role}</p>{/if}
+                </div>
+                {#if userForm.role === 'Dentista'}
+                    <div class="space-y-2">
+                        <Label>Consultorio Asignado (Opcional)</Label>
+                        <Input bind:value={userForm.room} placeholder="Ej: Consultorio 1" />
+                    </div>
+                    <div class="space-y-2">
+                        <Label>Colegiatura (CMP)</Label>
+                        <Input bind:value={userForm.cmp} placeholder="Ej: 12345" />
+                    </div>
+                {/if}
             </div>
-            <div class="space-y-2">
-                <Label>Apellidos *</Label>
-                <Input bind:value={userForm.last_name} placeholder="Ej: Pérez" required />
-            </div>
-            <div class="space-y-2">
-                <Label>Correo electrónico</Label>
-                <Input type="email" bind:value={userForm.email} placeholder="ejemplo@clinica.com" />
-            </div>
-            <div class="space-y-2">
-                <Label>Nombre de usuario (Login) *</Label>
-                <Input bind:value={userForm.username} placeholder="Ej: jperez" required />
-            </div>
-            <div class="space-y-2">
-                <Label>Contraseña *</Label>
-                <Input type="password" bind:value={userForm.password} required />
-            </div>
-            <div class="space-y-2">
-                <Label>Rol del usuario *</Label>
-                <select class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" bind:value={userForm.role}>
-                    {#each roles as role}
-                        <option value={role}>{role}</option>
-                    {/each}
-                </select>
-                {#if userForm.errors.role}<p class="text-xs text-red-500">{userForm.errors.role}</p>{/if}
-            </div>
-            <div class="flex items-center space-x-2 pt-2">
+            
+            <div class="flex items-center space-x-2 pt-4 mt-2">
                 <Checkbox id="is-active" bind:checked={userForm.is_active} />
                 <Label for="is-active" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Usuario activo (puede iniciar sesión)
@@ -293,3 +372,5 @@
         </div>
     </DialogContent>
 </Dialog>
+
+<ScheduleModal bind:isOpen={isScheduleModalOpen} user={selectedUserForSchedule} />

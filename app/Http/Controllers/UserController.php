@@ -13,7 +13,7 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::with('roles');
+        $query = User::with(['roles', 'schedules']);
 
         if ($request->has('search') && $request->input('search') !== '') {
             $search = $request->input('search');
@@ -40,7 +40,10 @@ class UserController extends Controller
             'username' => 'required|string|max:255|unique:users',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
-            'role' => 'required|string|exists:roles,name'
+            'role' => 'required|string|exists:roles,name',
+            'room' => 'nullable|string|max:255',
+            'dni' => 'nullable|string|max:15|unique:users',
+            'cmp' => 'nullable|string|max:255',
         ]);
 
         $user = User::create([
@@ -49,6 +52,10 @@ class UserController extends Controller
             'username' => $validated['username'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'room' => $validated['room'] ?? null,
+            'dni' => $validated['dni'] ?? null,
+            'cmp' => $validated['cmp'] ?? null,
+            'is_active' => $request->boolean('is_active', true),
         ]);
 
         $user->assignRole($validated['role']);
@@ -63,7 +70,10 @@ class UserController extends Controller
             'last_name' => 'required|string|max:255',
             'username' => ['required','string','max:255', Rule::unique('users')->ignore($user->id)],
             'email' => ['required','string','email','max:255', Rule::unique('users')->ignore($user->id)],
-            'role' => 'required|string|exists:roles,name'
+            'role' => 'required|string|exists:roles,name',
+            'room' => 'nullable|string|max:255',
+            'dni' => ['nullable','string','max:15', Rule::unique('users')->ignore($user->id)],
+            'cmp' => 'nullable|string|max:255',
         ]);
 
         $user->update([
@@ -71,6 +81,10 @@ class UserController extends Controller
             'last_name' => $validated['last_name'],
             'username' => $validated['username'],
             'email' => $validated['email'],
+            'room' => $validated['room'] ?? null,
+            'dni' => $validated['dni'] ?? null,
+            'cmp' => $validated['cmp'] ?? null,
+            'is_active' => $request->boolean('is_active', true),
         ]);
 
         if ($request->filled('password')) {

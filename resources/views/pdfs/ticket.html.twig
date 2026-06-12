@@ -328,6 +328,9 @@
     {# ── Footer ── #}
     <div class="line-dashed"></div>
     <div class="footer">
+        {% if params.system.ticket_pie %}
+            <div style="font-weight:bold;margin-bottom:3px;">{{ params.system.ticket_pie }}</div>
+        {% endif %}
         Representación Impresa de la
         {% if doc.tipoDoc == '01' %}FACTURA
         {% elseif doc.tipoDoc == '03' %}BOLETA DE VENTA

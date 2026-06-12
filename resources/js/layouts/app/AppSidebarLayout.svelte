@@ -16,11 +16,14 @@
     } = $props();
 </script>
 
-<AppShell variant="sidebar">
+<AppShell variant="sidebar" class="bg-slate-50 dark:bg-slate-950">
     <AppSidebar />
     <AppContent variant="sidebar" class="overflow-x-hidden">
         <AppSidebarHeader {breadcrumbs} />
-        {@render children?.()}
+        <!-- Contenedor principal con espaciado consistente -->
+        <main class="flex-1">
+            {@render children?.()}
+        </main>
     </AppContent>
     <Toaster />
 </AppShell>

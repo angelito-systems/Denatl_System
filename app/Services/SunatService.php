@@ -4,51 +4,52 @@ namespace App\Services;
 
 use App\Models\Configuration;
 use App\Models\Payment;
-use Greenter\See;
-use Greenter\Ws\Services\SunatEndpoints;
-use Greenter\Model\Client\Client;
-use Greenter\Model\Company\Company;
-use Greenter\Model\Company\Address;
-use Greenter\Model\Sale\Invoice;
-use Greenter\Model\Sale\Note;
-use Greenter\Model\Sale\SaleDetail;
-use Greenter\Model\Sale\Legend;
-use Greenter\Report\HtmlReport;
-use Greenter\Report\Resolver\DefaultTemplateResolver;
-use Greenter\Report\XmlUtils;
-use Illuminate\Support\Facades\Storage;
-use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use Exception;
+use Greenter\Model\Client\Client;
+use Greenter\Model\Company\Address;
+use Greenter\Model\Company\Company;
+use Greenter\Model\Sale\Invoice;
+use Greenter\Model\Sale\Legend;
+use Greenter\Model\Sale\Note;
+use Greenter\Model\Sale\SaleDetail;
+use Greenter\Report\HtmlReport;
+use Greenter\Report\Resolver\DefaultTemplateResolver;
+use Greenter\Report\XmlUtils;
+use Greenter\See;
+use Greenter\Ws\Services\SunatEndpoints;
+use Illuminate\Support\Facades\Storage;
 
 class SunatService
 {
     private See $see;
+
     private Company $company;
 
     public function __construct()
     {
-        $this->see = new See();
+        $this->see = new See;
 
-        $environment = Configuration::get('sunat_environment', 'demo');
-        $certPem     = Configuration::get('sunat_cert_pem');
-        $ruc         = Configuration::get('sunat_ruc', '20000000000');
-        $user        = Configuration::get('sunat_sol_user', 'MODDATOS');
-        $pass        = Configuration::get('sunat_sol_pass', 'moddatos');
-        $razonSocial = Configuration::get('sunat_razon_social', 'MI CLINICA DENTAL SAC');
+        $environment = Configuration::get('sunat_environment') ?: 'demo';
+        $certPem = Configuration::get('sunat_cert_pem') ?: '';
+        $ruc = Configuration::get('sunat_ruc') ?: '20000000000';
+        $user = Configuration::get('sunat_sol_user') ?: 'MODDATOS';
+        $pass = Configuration::get('sunat_sol_pass') ?: 'moddatos';
+        $razonSocial = Configuration::get('sunat_razon_social') ?: 'MI CLINICA DENTAL SAC';
 
         // ── Certificado y endpoint ────────────────────────────────────────────
-        if ($environment === 'demo' || !$certPem) {
-            if (!$certPem) {
+        if ($environment === 'demo' || ! $certPem) {
+            if (! $certPem) {
                 $certPath = storage_path('app/private/certificate.pem');
                 if (file_exists($certPath)) {
                     $certPem = file_get_contents($certPath) ?: '';
                 } else {
                     throw new Exception(
-                        "Certificado no encontrado en: {$certPath}. " .
-                        "Coloca 'certificate.pem' en storage/app/private/ o súbelo desde Configuración."
+                        "Certificado no encontrado en: {$certPath}. ".
+                            "Coloca 'certificate.pem' en storage/app/private/ o súbelo desde Configuración."
                     );
                 }
             }
@@ -57,23 +58,23 @@ class SunatService
             $this->see->setService(SunatEndpoints::FE_PRODUCCION);
         }
 
-        if (!empty($certPem)) {
+        if (! empty($certPem)) {
             $this->see->setCertificate($certPem);
         }
         $this->see->setClaveSOL($ruc, $user, $pass);
 
         // ── Empresa emisora ───────────────────────────────────────────────────
-        $address = (new Address())
+        $address = (new Address)
             ->setUbigueo('150101')
             ->setDepartamento('LIMA')
             ->setProvincia('LIMA')
             ->setDistrito('LIMA')
-            ->setDireccion(Configuration::get('clinica_direccion', 'Av. Principal 123'));
+            ->setDireccion(Configuration::get('clinica_direccion') ?: 'Av. Principal 123');
 
-        $this->company = (new Company())
+        $this->company = (new Company)
             ->setRuc($ruc)
             ->setRazonSocial($razonSocial)
-            ->setNombreComercial(Configuration::get('clinica_nombre', 'Clínica Dental'))
+            ->setNombreComercial(Configuration::get('clinica_nombre') ?: 'Clínica Dental')
             ->setAddress($address);
     }
 
@@ -86,16 +87,16 @@ class SunatService
      */
     public function buildInvoice(Payment $payment): Invoice
     {
-        $isFactura   = $payment->receipt_type === 'Factura';
-        $tipoDoc     = $isFactura ? '01' : '03';
-        $serie       = $isFactura ? 'F001' : 'B001';
+        $isFactura = $payment->receipt_type === 'Factura';
+        $tipoDoc = $isFactura ? '01' : '03';
+        $serie = $isFactura ? 'F001' : 'B001';
         $correlativo = str_pad($payment->id, 8, '0', STR_PAD_LEFT);
 
         $client = $this->buildClient($payment, $isFactura);
 
         [$baseIgv, $igv, $total] = $this->calcularMontos($payment->amount);
 
-        $detail = (new SaleDetail())
+        $detail = (new SaleDetail)
             ->setCodProducto('S001')
             ->setUnidad('ZZ')                               // Servicios Cat. 03
             ->setDescripcion($payment->notes ?: 'Tratamiento Odontológico')
@@ -109,13 +110,13 @@ class SunatService
             ->setTotalImpuestos($igv)
             ->setMtoPrecioUnitario($total);
 
-        return (new Invoice())
+        return (new Invoice)
             ->setUblVersion('2.1')
             ->setTipoOperacion('0101')
             ->setTipoDoc($tipoDoc)
             ->setSerie($serie)
             ->setCorrelativo($correlativo)
-            ->setFechaEmision(new \DateTime())
+            ->setFechaEmision(new \DateTime)
             ->setTipoMoneda('PEN')
             ->setCompany($this->company)
             ->setClient($client)
@@ -127,7 +128,7 @@ class SunatService
             ->setMtoImpVenta($total)
             ->setDetails([$detail])
             ->setLegends([
-                (new Legend())
+                (new Legend)
                     ->setCode('1000')
                     ->setValue($this->numeroALetras($total)),
             ]);
@@ -136,12 +137,12 @@ class SunatService
     /**
      * Construye una Nota de Crédito (tipoDoc '07') vinculada a un comprobante previo.
      *
-     * @param  Payment $payment          Pago de la nota de crédito
-     * @param  string  $serieRef         Serie del comprobante de referencia (ej. 'F001')
-     * @param  string  $correlativoRef   Correlativo de referencia (ej. '00000001')
-     * @param  string  $tipoDocRef       Tipo doc referencia: '01' Factura | '03' Boleta
-     * @param  string  $codMotivo        Motivo: '01' Anulación, '02' Anulación errores, etc.
-     * @param  string  $descMotivo       Descripción libre del motivo
+     * @param  Payment  $payment  Pago de la nota de crédito
+     * @param  string  $serieRef  Serie del comprobante de referencia (ej. 'F001')
+     * @param  string  $correlativoRef  Correlativo de referencia (ej. '00000001')
+     * @param  string  $tipoDocRef  Tipo doc referencia: '01' Factura | '03' Boleta
+     * @param  string  $codMotivo  Motivo: '01' Anulación, '02' Anulación errores, etc.
+     * @param  string  $descMotivo  Descripción libre del motivo
      */
     public function buildNotaCredito(
         Payment $payment,
@@ -151,15 +152,15 @@ class SunatService
         string $codMotivo = '01',
         string $descMotivo = 'ANULACIÓN DE OPERACIÓN'
     ): Note {
-        $isFactura   = str_starts_with($serieRef, 'F');
-        $serie       = $isFactura ? 'FC01' : 'BC01';
+        $isFactura = str_starts_with($serieRef, 'F');
+        $serie = $isFactura ? 'FC01' : 'BC01';
         $correlativo = str_pad($payment->id, 8, '0', STR_PAD_LEFT);
 
         $client = $this->buildClient($payment, $isFactura);
 
         [$baseIgv, $igv, $total] = $this->calcularMontos($payment->amount);
 
-        $detail = (new SaleDetail())
+        $detail = (new SaleDetail)
             ->setCodProducto('S001')
             ->setUnidad('ZZ')
             ->setDescripcion($payment->notes ?: 'Nota de Crédito – Tratamiento Odontológico')
@@ -173,12 +174,12 @@ class SunatService
             ->setTotalImpuestos($igv)
             ->setMtoPrecioUnitario($total);
 
-        return (new Note())
+        return (new Note)
             ->setUblVersion('2.1')
             ->setTipoDoc('07')                              // 07 = Nota de Crédito
             ->setSerie($serie)
             ->setCorrelativo($correlativo)
-            ->setFechaEmision(new \DateTime())
+            ->setFechaEmision(new \DateTime)
             ->setTipoMoneda('PEN')
             ->setCompany($this->company)
             ->setClient($client)
@@ -194,7 +195,7 @@ class SunatService
             ->setMtoImpVenta($total)
             ->setDetails([$detail])
             ->setLegends([
-                (new Legend())
+                (new Legend)
                     ->setCode('1000')
                     ->setValue($this->numeroALetras($total)),
             ]);
@@ -206,41 +207,41 @@ class SunatService
 
     public function emitirComprobante(Payment $payment): Payment
     {
-        if (!in_array($payment->receipt_type, ['Boleta', 'Factura'])) {
+        if (! in_array($payment->receipt_type, ['Boleta', 'Factura'])) {
             throw new Exception('Solo se pueden emitir Boletas y Facturas a SUNAT.');
         }
 
-        $invoice     = $this->buildInvoice($payment);
-        $serie       = $invoice->getSerie();
+        $invoice = $this->buildInvoice($payment);
+        $serie = $invoice->getSerie();
         $correlativo = $invoice->getCorrelativo();
 
         $result = $this->see->send($invoice);
 
-        $payment->sunat_serie       = $serie;
+        $payment->sunat_serie = $serie;
         $payment->sunat_correlativo = $correlativo;
 
         // ── XML firmado ───────────────────────────────────────────────────────
         $xmlSigned = $this->see->getFactory()->getLastXml();
-        $xmlName   = $invoice->getName() . '.xml';
-        Storage::disk('public')->put('sunat/' . $xmlName, $xmlSigned);
-        $payment->sunat_xml_path = 'sunat/' . $xmlName;
-        $payment->sunat_hash     = $this->extractHashFromXml($xmlSigned);
+        $xmlName = $invoice->getName().'.xml';
+        Storage::disk('public')->put('sunat/'.$xmlName, $xmlSigned);
+        $payment->sunat_xml_path = 'sunat/'.$xmlName;
+        $payment->sunat_hash = $this->extractHashFromXml($xmlSigned);
 
-        if (!$result->isSuccess()) {
-            $payment->sunat_status  = 'Rechazado';
-            $payment->sunat_message = $result->getError()->getCode() . ' - ' . $result->getError()->getMessage();
+        if (! $result->isSuccess()) {
+            $payment->sunat_status = 'Rechazado';
+            $payment->sunat_message = $result->getError()->getCode().' - '.$result->getError()->getMessage();
             $payment->save();
             throw new Exception($payment->sunat_message);
         }
 
         $cdr = $result->getCdrResponse();
-        $payment->sunat_status  = $cdr->isAccepted() ? 'Aceptado' : 'Rechazado';
+        $payment->sunat_status = $cdr->isAccepted() ? 'Aceptado' : 'Rechazado';
         $payment->sunat_message = $cdr->getDescription();
 
         // ── CDR ───────────────────────────────────────────────────────────────
-        $cdrName = 'R-' . $invoice->getName() . '.zip';
-        Storage::disk('public')->put('sunat/' . $cdrName, $result->getCdrZip());
-        $payment->sunat_cdr_path = 'sunat/' . $cdrName;
+        $cdrName = 'R-'.$invoice->getName().'.zip';
+        Storage::disk('public')->put('sunat/'.$cdrName, $result->getCdrZip());
+        $payment->sunat_cdr_path = 'sunat/'.$cdrName;
 
         $payment->save();
 
@@ -255,35 +256,35 @@ class SunatService
         string $serieRef,
         string $correlativoRef,
         string $tipoDocRef = '01',
-        string $codMotivo  = '01',
+        string $codMotivo = '01',
         string $descMotivo = 'ANULACIÓN DE OPERACIÓN'
     ): Payment {
-        $note        = $this->buildNotaCredito($payment, $serieRef, $correlativoRef, $tipoDocRef, $codMotivo, $descMotivo);
-        $result      = $this->see->send($note);
+        $note = $this->buildNotaCredito($payment, $serieRef, $correlativoRef, $tipoDocRef, $codMotivo, $descMotivo);
+        $result = $this->see->send($note);
 
-        $payment->sunat_serie       = $note->getSerie();
+        $payment->sunat_serie = $note->getSerie();
         $payment->sunat_correlativo = $note->getCorrelativo();
 
         $xmlSigned = $this->see->getFactory()->getLastXml();
-        $xmlName   = $note->getName() . '.xml';
-        Storage::disk('public')->put('sunat/' . $xmlName, $xmlSigned);
-        $payment->sunat_xml_path = 'sunat/' . $xmlName;
-        $payment->sunat_hash     = $this->extractHashFromXml($xmlSigned);
+        $xmlName = $note->getName().'.xml';
+        Storage::disk('public')->put('sunat/'.$xmlName, $xmlSigned);
+        $payment->sunat_xml_path = 'sunat/'.$xmlName;
+        $payment->sunat_hash = $this->extractHashFromXml($xmlSigned);
 
-        if (!$result->isSuccess()) {
-            $payment->sunat_status  = 'Rechazado';
-            $payment->sunat_message = $result->getError()->getCode() . ' - ' . $result->getError()->getMessage();
+        if (! $result->isSuccess()) {
+            $payment->sunat_status = 'Rechazado';
+            $payment->sunat_message = $result->getError()->getCode().' - '.$result->getError()->getMessage();
             $payment->save();
             throw new Exception($payment->sunat_message);
         }
 
         $cdr = $result->getCdrResponse();
-        $payment->sunat_status  = $cdr->isAccepted() ? 'Aceptado' : 'Rechazado';
+        $payment->sunat_status = $cdr->isAccepted() ? 'Aceptado' : 'Rechazado';
         $payment->sunat_message = $cdr->getDescription();
 
-        $cdrName = 'R-' . $note->getName() . '.zip';
-        Storage::disk('public')->put('sunat/' . $cdrName, $result->getCdrZip());
-        $payment->sunat_cdr_path = 'sunat/' . $cdrName;
+        $cdrName = 'R-'.$note->getName().'.zip';
+        Storage::disk('public')->put('sunat/'.$cdrName, $result->getCdrZip());
+        $payment->sunat_cdr_path = 'sunat/'.$cdrName;
 
         $payment->save();
 
@@ -297,9 +298,8 @@ class SunatService
     /**
      * Genera el HTML del comprobante.
      *
-     * @param  Payment  $payment
-     * @param  string   $format   'ticket' (80 mm) | 'a4'
-     * @param  bool     $isNota   true para Notas de Crédito/Débito
+     * @param  string  $format  'ticket' (80 mm) | 'a4'
+     * @param  bool  $isNota  true para Notas de Crédito/Débito
      */
     public function getHtmlReport(Payment $payment, string $format = 'a4', bool $isNota = false): string
     {
@@ -319,19 +319,32 @@ class SunatService
         } else {
             try {
                 $xmlSigned = $this->see->getXmlSigned($doc);
-                $hash      = $this->extractHashFromXml($xmlSigned);
+                $hash = $this->extractHashFromXml($xmlSigned);
             } catch (\Throwable) {
                 $hash = '';
             }
         }
 
+        $extras = [];
+        if ($payment->treatment_contract_id) {
+            $contract = \App\Models\TreatmentContract::find($payment->treatment_contract_id);
+            if ($contract) {
+                $extras[] = ['name' => 'Saldo Pendiente', 'value' => 'S/ ' . number_format($contract->balance_due, 2)];
+                $extras[] = ['name' => 'Tratamiento', 'value' => $contract->treatment_name];
+            }
+        }
+
         if ($format === 'ticket') {
             // ── Ticket 80 mm ─────────────────────────────────────────────────
-            // Greenter no tiene template de ticket; usamos el custom en
-            // resources/views/pdfs/ticket.html.twig
-            // Logo en base64 (el twig custom lo incrusta directamente)
-            $logoPath = public_path('images/logo.png');
-            $logo     = file_exists($logoPath) ? base64_encode(file_get_contents($logoPath)) : '';
+            // Logo desde configuración (storage/public) con fallback a public/images/logo.png
+            $logoStoragePath = Configuration::get('logo_path');
+            $logoFsPath = $logoStoragePath
+                ? storage_path('app/public/'.$logoStoragePath)
+                : public_path('images/logo.png');
+            $logo = file_exists($logoFsPath) ? base64_encode(file_get_contents($logoFsPath)) : '';
+
+            // Mensaje al pie del ticket desde configuración
+            $ticketPie = Configuration::get('ticket_pie', '¡Gracias por su preferencia!');
 
             // QR manual (Anexo 6) porque el twig custom no tiene qrCode()
             $qrData = implode('|', [
@@ -352,23 +365,25 @@ class SunatService
 
             return $report->render($doc, [
                 'system' => [
-                    'logo'          => $logo,
-                    'hash'          => $hash,
-                    'qr'            => $this->generateQrBase64($qrData),
-                    'sunat_status'  => $payment->sunat_status ?? '',
+                    'logo' => $logo,
+                    'hash' => $hash,
+                    'qr' => $this->generateQrBase64($qrData),
+                    'sunat_status' => $payment->sunat_status ?? '',
                     'sunat_message' => $payment->sunat_message ?? '',
+                    'ticket_pie' => $ticketPie,
+                ],
+                'user' => [
+                    'extras' => $extras,
                 ],
             ]);
         }
 
         // ── A4: DefaultTemplateResolver elige invoice/note/etc automáticamente ──
-        // El twig oficial genera el QR con {{ qrCode(doc)|image_b64('svg+xml') }}
-        // y el logo con {{ params.system.logo|image_b64 }} (requiere binario crudo)
         $logoPath = public_path('images/logo.png');
-        $logo     = file_exists($logoPath) ? file_get_contents($logoPath) : '';
+        $logo = file_exists($logoPath) ? file_get_contents($logoPath) : '';
 
-        $report   = new HtmlReport();
-        $resolver = new DefaultTemplateResolver();
+        $report = new HtmlReport;
+        $resolver = new DefaultTemplateResolver;
         $report->setTemplate($resolver->getTemplate($doc));
 
         return $report->render($doc, [
@@ -377,13 +392,12 @@ class SunatService
                 'hash' => $hash,
             ],
             'user' => [
-                'header' => 'Telf: ' . Configuration::get('clinica_telefono', ''),
-                'extras' => [],
+                'header' => 'Telf: '.Configuration::get('clinica_telefono') ?: '',
+                'extras' => $extras,
                 'footer' => '',
             ],
         ]);
     }
-
 
     // ─────────────────────────────────────────────────────────────────────────
     // Helpers privados
@@ -391,20 +405,21 @@ class SunatService
 
     private function buildClient(Payment $payment, bool $isFactura): Client
     {
-        $client = new Client();
+        $client = new Client;
         if ($isFactura) {
             $client->setTipoDoc('6')
-                   ->setNumDoc($payment->billing_document)
-                   ->setRznSocial($payment->billing_name);
+                ->setNumDoc($payment->billing_document)
+                ->setRznSocial($payment->billing_name);
         } else {
             $tipoDoc = $payment->billing_document ? '1' : '-'; // 1 = DNI
             $client->setTipoDoc($tipoDoc)
-                   ->setNumDoc($payment->billing_document ?: '00000000')
-                   ->setRznSocial(
-                       $payment->billing_name
-                       ?: ($payment->patient->first_name . ' ' . $payment->patient->last_name)
-                   );
+                ->setNumDoc($payment->billing_document ?: '00000000')
+                ->setRznSocial(
+                    $payment->billing_name
+                        ?: ($payment->patient->first_name.' '.$payment->patient->last_name)
+                );
         }
+
         return $client;
     }
 
@@ -413,9 +428,10 @@ class SunatService
      */
     private function calcularMontos(float $monto): array
     {
-        $total   = round($monto, 2);
+        $total = round($monto, 2);
         $baseIgv = round($total / 1.18, 2);
-        $igv     = round($total - $baseIgv, 2);
+        $igv = round($total - $baseIgv, 2);
+
         return [$baseIgv, $igv, $total];
     }
 
@@ -426,10 +442,10 @@ class SunatService
     public function extractHashFromXml(string $xml): string
     {
         try {
-            return (new XmlUtils())->getHashSign($xml);
+            return (new XmlUtils)->getHashSign($xml);
         } catch (\Throwable) {
             libxml_use_internal_errors(true);
-            $dom = new \DOMDocument();
+            $dom = new \DOMDocument;
             if ($dom->loadXML($xml)) {
                 $nodes = $dom->getElementsByTagNameNS(
                     'http://www.w3.org/2000/09/xmldsig#',
@@ -439,6 +455,7 @@ class SunatService
                     return trim($nodes->item(0)->textContent);
                 }
             }
+
             return '';
         }
     }
@@ -446,7 +463,8 @@ class SunatService
     private function generateQrBase64(string $data): string
     {
         try {
-            $renderer = new ImageRenderer(new RendererStyle(200), new SvgImageBackEnd());
+            $renderer = new ImageRenderer(new RendererStyle(200), new SvgImageBackEnd);
+
             return base64_encode((new Writer($renderer))->writeString($data));
         } catch (\Throwable) {
             return '';
@@ -456,6 +474,7 @@ class SunatService
     private function numeroALetras(float $monto): string
     {
         [$entero, $decimales] = explode('.', number_format($monto, 2, '.', ''));
+
         return "SON {$entero} CON {$decimales}/100 SOLES";
     }
 }

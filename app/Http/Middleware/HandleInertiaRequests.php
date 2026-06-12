@@ -35,13 +35,30 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $config = class_exists(\App\Models\Configuration::class) ? \App\Models\Configuration::all() : collect([]);
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? array_merge($request->user()->toArray(), [
+                    'roles' => $request->user()->roles->pluck('name'),
+                    'permissions' => $request->user()->getAllPermissions()->pluck('name'),
+                ]) : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'evolutionConfig' => [
+                'url' => $config->where('key', 'whatsapp_api_url')->first()?->value ?? null,
+                'apiKey' => $config->where('key', 'whatsapp_api_key')->first()?->value ?? null,
+                'instance' => $config->where('key', 'whatsapp_instance')->first()?->value ?? null,
+            ],
+            'flash' => [
+                'message' => fn () => $request->session()->get('message'),
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+                'new_payment_id' => fn () => $request->session()->get('new_payment_id'),
+                'auto_print' => fn () => $request->session()->get('auto_print'),
+            ],
         ];
     }
 }

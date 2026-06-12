@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Patient;
 use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
-use Inertia\Inertia;
+use App\Models\Patient;
+use App\Services\PdfGeneratorService;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class PatientController extends Controller
 {
@@ -19,24 +20,16 @@ class PatientController extends Controller
         if ($request->has('search') && $request->input('search') !== '') {
             $search = $request->input('search');
             $query->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('dni', 'like', "%{$search}%");
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('dni', 'like', "%{$search}%");
         }
 
         $patients = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
 
         return Inertia::render('Patients/Index', [
             'patients' => $patients,
-            'filters' => $request->only(['search'])
+            'filters' => $request->only(['search']),
         ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return Inertia::render('Patients/Create');
     }
 
     /**
@@ -45,7 +38,8 @@ class PatientController extends Controller
     public function store(StorePatientRequest $request)
     {
         $patient = Patient::create($request->validated());
-        return redirect()->route('patients.show', $patient->id)->with('success', 'Patient created successfully.');
+
+        return redirect()->back()->with('success', 'Patient created successfully.');
     }
 
     /**
@@ -53,20 +47,19 @@ class PatientController extends Controller
      */
     public function show(Patient $patient)
     {
-        $patient->load(['documents.media']);
-        
-        return Inertia::render('Patients/Show', [
-            'patient' => $patient
-        ]);
-    }
+        $patient->load(['documents.media', 'evolutions.dentist', 'evolutions.appointment', 'appointments', 'treatmentContracts.document', 'treatmentContracts.payments']);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Patient $patient)
-    {
-        return Inertia::render('Patients/Edit', [
-            'patient' => $patient
+        $latestOdontogram = $patient->evolutions()
+            ->whereNotNull('odontogram_data')
+            ->latest()
+            ->first();
+
+        $treatments = \App\Models\Treatment::orderBy('name')->get();
+
+        return Inertia::render('Patients/Show', [
+            'patient' => $patient,
+            'treatments' => $treatments,
+            'latestOdontogram' => $latestOdontogram ? $latestOdontogram->odontogram_data : new \stdClass,
         ]);
     }
 
@@ -76,7 +69,8 @@ class PatientController extends Controller
     public function update(UpdatePatientRequest $request, Patient $patient)
     {
         $patient->update($request->validated());
-        return redirect()->route('patients.show', $patient->id)->with('success', 'Patient updated successfully.');
+
+        return redirect()->back()->with('success', 'Patient updated successfully.');
     }
 
     /**
@@ -85,17 +79,29 @@ class PatientController extends Controller
     public function destroy(Patient $patient)
     {
         $patient->delete();
+
         return redirect()->back()->with('success', 'Paciente eliminado exitosamente.');
     }
 
-    public function downloadHistoria(Patient $patient, \App\Services\PdfGeneratorService $pdfService)
+    public function downloadHistoria(Patient $patient, PdfGeneratorService $pdfService)
     {
         return $pdfService->generarHistoriaClinica($patient)->download();
     }
 
-    public function downloadContrato(Request $request, Patient $patient, \App\Services\PdfGeneratorService $pdfService)
+    public function downloadContrato(Request $request, Patient $patient, PdfGeneratorService $pdfService)
     {
         $plantilla = $request->input('plantilla', 'contrato');
+
         return $pdfService->generarPlantilla($patient, $plantilla)->inline("{$plantilla}_{$patient->id}.pdf");
+    }
+
+    public function downloadOdontograma(Request $request, Patient $patient, PdfGeneratorService $pdfService)
+    {
+        $request->validate(['html' => 'required|string']);
+        $pdf = $pdfService->generarOdontograma($patient, $request->html);
+
+        return response()->json([
+            'base64' => $pdf->base64(),
+        ]);
     }
 }

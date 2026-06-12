@@ -8,6 +8,8 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+        <link rel="stylesheet" href="{{ asset('assets/css/all.min.css') }}">
+
         @fonts
 
         @vite(['resources/css/app.css', 'resources/js/app.ts'])
@@ -17,5 +19,8 @@
     </head>
     <body class="font-sans antialiased">
         <x-inertia::app />
+
+
+        <script src="{{ asset('assets/js/all.min.js') }}"></script>
     </body>
 </html>

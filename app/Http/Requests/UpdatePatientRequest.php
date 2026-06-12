@@ -23,7 +23,7 @@ class UpdatePatientRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'dni' => ['required', 'string', 'max:15', 'unique:patients,dni,' . $this->route('patient')->id],
+            'dni' => ['required', 'string', 'max:15', 'unique:patients,dni,'.$this->route('patient')->id],
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20'],
@@ -31,6 +31,14 @@ class UpdatePatientRequest extends FormRequest
             'date_of_birth' => ['nullable', 'date'],
             'gender' => ['nullable', 'string', 'in:Masculino,Femenino,Otro'],
             'address' => ['nullable', 'string'],
+            'occupation' => ['nullable', 'string', 'max:255'],
+            'emergency_name' => ['nullable', 'string', 'max:255'],
+            'emergency_phone' => ['nullable', 'string', 'max:20'],
+            'blood_type' => ['nullable', 'string', 'max:5'],
+            'allergies' => ['nullable', 'string'],
+            'medical_notes' => ['nullable', 'string'],
+            'family_history' => ['nullable', 'string'],
+            'current_medication' => ['nullable', 'string'],
         ];
     }
 }

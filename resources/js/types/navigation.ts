@@ -12,7 +12,10 @@ export type BreadcrumbItem = {
 
 export type NavItem = {
     title: string;
-    href: NonNullable<LinkComponentBaseProps['href']>;
+    href?: NonNullable<LinkComponentBaseProps['href']>;
     icon?: NavIcon;
     isActive?: boolean;
+    children?: NavItem[];
+    roles?: string[];
+    permissions?: string[];
 };

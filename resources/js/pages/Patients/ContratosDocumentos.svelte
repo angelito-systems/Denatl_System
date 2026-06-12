@@ -9,6 +9,7 @@
     import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
     import PdfViewerModal from '@/components/PdfViewerModal.svelte';
     import SignaturePadModal from '@/components/SignaturePadModal.svelte';
+    import SendWhatsappButton from '@/components/SendWhatsappButton.svelte';
     import { toast } from 'svelte-sonner';
 
     let { patient } = $props();
@@ -101,48 +102,6 @@
                 onSuccess: () => toast.success('Documento eliminado correctamente')
             });
         }
-    }
-
-    function openWhatsAppModal(doc: any) {
-        selectedMediaForWa = doc;
-        isWhatsAppModalOpen = true;
-    }
-
-    function sendWhatsApp() {
-        if (!waPhone) {
-            toast.error('Ingresa un número de WhatsApp');
-            return;
-        }
-        if (!selectedMediaForWa) return;
-
-        isSendingWa = true;
-        
-        let urlToSend = '';
-        if (selectedMediaForWa.status === 'Borrador') {
-            toast.error('Debes firmar el documento primero antes de enviarlo, o descárgalo manualmente.');
-            isSendingWa = false;
-            return;
-        } else {
-            urlToSend = selectedMediaForWa.media[0].original_url;
-        }
-
-        router.post('/whatsapp/send-document', {
-            phone: waPhone,
-            document_url: urlToSend,
-            caption: `Hola, adjunto el documento: ${selectedMediaForWa.name}`,
-            patient_id: patient.id
-        }, {
-            preserveScroll: true,
-            onSuccess: () => {
-                isSendingWa = false;
-                isWhatsAppModalOpen = false;
-                toast.success('Enviado por WhatsApp');
-            },
-            onError: () => {
-                isSendingWa = false;
-                toast.error('Error al enviar el mensaje');
-            }
-        });
     }
 
     function openSignModal(doc: any) {
@@ -274,9 +233,18 @@
                                                     <PenTool class="w-4 h-4" />
                                                 </Button>
                                             {/if}
-                                            <Button variant="ghost" size="icon" class="text-green-600 hover:bg-green-50 hover:text-green-700" onclick={() => openWhatsAppModal(doc)} title="Enviar por WhatsApp">
-                                                <MessageCircle class="w-4 h-4" />
-                                            </Button>
+                                            {#if doc.status !== 'Borrador' && doc.media && doc.media.length > 0}
+                                                <SendWhatsappButton 
+                                                    phone={patient.phone} 
+                                                    media_id={doc.media[0].id} 
+                                                    caption={`Hola, adjunto el documento: ${doc.name}`}
+                                                    variant="ghost"
+                                                    buttonText=""
+                                                    class="h-9 w-9 p-0 text-green-600 hover:bg-green-50 hover:text-green-700"
+                                                >
+                                                    <MessageCircle class="w-4 h-4" />
+                                                </SendWhatsappButton>
+                                            {/if}
                                             <Button variant="ghost" size="icon" onclick={() => viewPdf(doc)} title="Imprimir / Ver PDF">
                                                 <FileText class="w-4 h-4 text-blue-600" />
                                             </Button>
@@ -325,32 +293,6 @@
         </CardContent>
     </Card>
 </div>
-
-<!-- Modal para enviar por WhatsApp -->
-<Dialog bind:open={isWhatsAppModalOpen}>
-    <DialogContent>
-        <DialogHeader>
-            <DialogTitle>Enviar por WhatsApp</DialogTitle>
-            <DialogDescription>
-                Se enviará el documento <strong>{selectedMediaForWa?.name}</strong>.
-            </DialogDescription>
-        </DialogHeader>
-        <div class="space-y-4 pt-4">
-            <div class="space-y-2">
-                <Label>Número de WhatsApp</Label>
-                <Input type="text" bind:value={waPhone} placeholder="Ej: +51 987654321" />
-                <p class="text-xs text-muted-foreground">Verifica que el número tenga el formato correcto con el código de país si es necesario.</p>
-            </div>
-            <Button class="w-full bg-emerald-600 hover:bg-emerald-700 text-white" onclick={sendWhatsApp} disabled={isSendingWa}>
-                {#if isSendingWa}
-                    <Loader2 class="w-4 h-4 mr-2 animate-spin" /> Enviando...
-                {:else}
-                    <MessageCircle class="w-4 h-4 mr-2" /> Enviar PDF
-                {/if}
-            </Button>
-        </div>
-    </DialogContent>
-</Dialog>
 
 <!-- Modal Visor de PDF Reutilizable -->
 <PdfViewerModal 

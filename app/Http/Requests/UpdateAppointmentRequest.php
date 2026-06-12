@@ -29,8 +29,51 @@ class UpdateAppointmentRequest extends FormRequest
             'start_time' => 'required',
             'duration' => 'required|integer|min:15',
             'treatment' => 'required|string|max:255',
-            'status' => 'required|string|in:pending,confirmed,cancelled,completed',
+            'status' => 'sometimes|string|in:pending,confirmed,cancelled,completed',
+            'room' => 'nullable|string|max:255',
+            'projector_status' => 'nullable|string',
             'notes' => 'nullable|string'
         ];
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if (!$this->has('start_time') || !$this->has('date') || !$this->has('dentist_id')) {
+                return;
+            }
+
+            $dentistId = $this->dentist_id;
+            $date = \Carbon\Carbon::parse($this->date);
+            $time = \Carbon\Carbon::parse($this->start_time);
+            
+            $dayOfWeek = $date->dayOfWeekIso;
+            
+            $schedule = \App\Models\DoctorSchedule::where('user_id', $dentistId)
+                ->where('day_of_week', $dayOfWeek)
+                ->where('is_working', true)
+                ->first();
+
+            if (!$schedule) {
+                $validator->errors()->add('start_time', 'El dentista no trabaja en este día.');
+                return;
+            }
+
+            $start = \Carbon\Carbon::parse($schedule->start_time);
+            $end = \Carbon\Carbon::parse($schedule->end_time);
+
+            if ($time->lt($start) || $time->gt($end)) {
+                $validator->errors()->add('start_time', "Fuera de horario laboral ({$schedule->start_time} - {$schedule->end_time}).");
+            }
+
+            if ($schedule->break_start && $schedule->break_end) {
+                $breakStart = \Carbon\Carbon::parse($schedule->break_start);
+                $breakEnd = \Carbon\Carbon::parse($schedule->break_end);
+                
+                if ($time->between($breakStart, $breakEnd)) {
+                    $validator->errors()->add('start_time', "Horario de refrigerio ({$schedule->break_start} - {$schedule->break_end}).");
+                }
+            }
+        });
     }
 }

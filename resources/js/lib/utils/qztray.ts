@@ -113,6 +113,34 @@ export class QZTrayService {
         }
     }
 
+    // Print a PDF from base64 data (avoids HTTPS cert issues with local .test domains)
+    static async imprimirPdfBase64(impresora: string, base64Data: string) {
+        await this.connect();
+
+        const config = qz.configs.create(impresora, {
+            size: { width: 80, height: null }, // mm — null = auto-length
+            units: 'mm',
+            scaleContent: false,
+        });
+
+        const printData = [
+            {
+                type: 'pixel',
+                format: 'pdf',
+                flavor: 'base64',
+                data: base64Data,
+            }
+        ];
+
+        try {
+            await qz.print(config, printData);
+            console.log('PDF (base64) print job sent to', impresora);
+        } catch (e) {
+            console.error('PDF base64 print failed', e);
+            throw e;
+        }
+    }
+
     // Print a PDF file directly via URL
     static async imprimirPdf(impresora: string, pdfUrl: string) {
         await this.connect();

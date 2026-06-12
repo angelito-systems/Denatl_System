@@ -64,14 +64,6 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
 @layer base {
     *,
     ::after,
@@ -96,105 +88,99 @@
     /* Colores base - Sistema Dental */
     --background: hsl(210 40% 98%);
     --foreground: hsl(222.2 84% 4.9%);
-    
+
     --card: hsl(0 0% 100%);
     --card-foreground: hsl(222.2 84% 4.9%);
-    
+
     --popover: hsl(0 0% 100%);
     --popover-foreground: hsl(222.2 84% 4.9%);
-    
-    /* Primary: Azul médico/dental */
-    --primary: hsl(199 89% 48%);
+
+    /* Primary: Azul Médico Trust */
+    --primary: hsl(221.2 83.2% 53.3%);
     --primary-foreground: hsl(210 40% 98%);
-    
-    /* Secondary: Cyan claro para acentos */
-    --secondary: hsl(187 100% 42%);
-    --secondary-foreground: hsl(222.2 47.4% 11.2%);
-    
-    /* Muted: Grises suaves */
+
+    --secondary: hsl(189 94.4% 43.3%);
+    --secondary-foreground: hsl(0 0% 100%);
+
     --muted: hsl(210 40% 96.1%);
     --muted-foreground: hsl(215.4 16.3% 46.9%);
-    
-    /* Accent: Verde salud/sanidad */
-    --accent: hsl(142 76% 36%);
-    --accent-foreground: hsl(210 40% 98%);
-    
-    --destructive: hsl(0 84.2% 60.2%);
+
+    /* CORRECCIÓN: Accent ahora es un tono azul/gris sutil para los hovers */
+    --accent: hsl(214 100% 96%); /* bg-blue-50 */
+    --accent-foreground: hsl(221 83% 53%); /* text-blue-600 */
+
+    --destructive: hsl(346.8 77.2% 49.8%);
     --destructive-foreground: hsl(210 40% 98%);
-    
+
     --border: hsl(214.3 31.8% 91.4%);
     --input: hsl(214.3 31.8% 91.4%);
-    --ring: hsl(199 89% 48%);
-    
-    /* Colores para gráficos odontológicos */
-    --chart-1: hsl(199 89% 48%);   /* Azul dental */
-    --chart-2: hsl(142 76% 36%);   /* Verde salud */
-    --chart-3: hsl(187 100% 42%);  /* Cyan */
-    --chart-4: hsl(271 91% 65%);   /* Púrpura */
-    --chart-5: hsl(24 95% 53%);    /* Naranja */
-    
+    --ring: hsl(221.2 83.2% 53.3%);
+
+    /* Gráficos */
+    --chart-1: hsl(221.2 83.2% 53.3%);
+    --chart-2: hsl(189 94.4% 43.3%);
+    --chart-3: hsl(160 84% 39%);
+    --chart-4: hsl(250 89% 65%);
+    --chart-5: hsl(35 92% 53%);
+
     --radius: 0.75rem;
-    
-    /* Sidebar - Tema médico */
+
+    /* Sidebar */
     --sidebar-background: hsl(0 0% 100%);
     --sidebar-foreground: hsl(222.2 84% 4.9%);
-    --sidebar-primary: hsl(199 89% 48%);
+    --sidebar-primary: hsl(221.2 83.2% 53.3%);
     --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(210 40% 96.1%);
-    --sidebar-accent-foreground: hsl(222.2 47.4% 11.2%);
+    --sidebar-accent: hsl(214 100% 96%);
+    --sidebar-accent-foreground: hsl(221 83% 53%);
     --sidebar-border: hsl(214.3 31.8% 91.4%);
-    --sidebar-ring: hsl(199 89% 48%);
+    --sidebar-ring: hsl(221.2 83.2% 53.3%);
 }
 
 .dark {
-    /* Modo oscuro - Sistema Dental */
-    --background: hsl(222.2 84% 4.9%);
+    /* Modo oscuro */
+    --background: hsl(222.2 47.4% 11.2%);
     --foreground: hsl(210 40% 98%);
-    
+
     --card: hsl(222.2 84% 4.9%);
     --card-foreground: hsl(210 40% 98%);
-    
+
     --popover: hsl(222.2 84% 4.9%);
     --popover-foreground: hsl(210 40% 98%);
-    
-    /* Primary: Azul más brillante para dark mode */
-    --primary: hsl(199 89% 60%);
+
+    --primary: hsl(217.2 91.2% 59.8%);
     --primary-foreground: hsl(222.2 47.4% 11.2%);
-    
-    /* Secondary: Cyan para dark */
-    --secondary: hsl(187 100% 50%);
+
+    --secondary: hsl(189 94.4% 50%);
     --secondary-foreground: hsl(222.2 47.4% 11.2%);
-    
+
     --muted: hsl(217.2 32.6% 17.5%);
     --muted-foreground: hsl(215 20.2% 65.1%);
-    
-    /* Accent: Verde salud más brillante */
-    --accent: hsl(142 76% 45%);
-    --accent-foreground: hsl(210 40% 98%);
-    
-    --destructive: hsl(0 62.8% 30.6%);
+
+    /* CORRECCIÓN: Accent ahora es un tono oscuro acorde para el hover */
+    --accent: hsl(217.2 32.6% 17.5%);
+    --accent-foreground: hsl(189 94.4% 50%);
+
+    --destructive: hsl(346.8 77.2% 60%);
     --destructive-foreground: hsl(210 40% 98%);
-    
+
     --border: hsl(217.2 32.6% 17.5%);
     --input: hsl(217.2 32.6% 17.5%);
-    --ring: hsl(199 89% 60%);
-    
-    /* Colores para gráficos en dark mode */
-    --chart-1: hsl(199 89% 60%);
-    --chart-2: hsl(142 76% 45%);
-    --chart-3: hsl(187 100% 50%);
-    --chart-4: hsl(271 91% 70%);
-    --chart-5: hsl(24 95% 60%);
-    
-    /* Sidebar - Dark mode médico */
+    --ring: hsl(217.2 91.2% 59.8%);
+
+    --chart-1: hsl(217.2 91.2% 59.8%);
+    --chart-2: hsl(189 94.4% 50%);
+    --chart-3: hsl(158 74% 45%);
+    --chart-4: hsl(250 89% 70%);
+    --chart-5: hsl(35 92% 60%);
+
     --sidebar-background: hsl(222.2 84% 4.9%);
     --sidebar-foreground: hsl(210 40% 98%);
-    --sidebar-primary: hsl(199 89% 60%);
+    --sidebar-primary: hsl(217.2 91.2% 59.8%);
     --sidebar-primary-foreground: hsl(0 0% 100%);
     --sidebar-accent: hsl(217.2 32.6% 17.5%);
-    --sidebar-accent-foreground: hsl(210 40% 98%);
+    --sidebar-accent-foreground: hsl(189 94.4% 50%);
     --sidebar-border: hsl(217.2 32.6% 17.5%);
-    --sidebar-ring: hsl(199 89% 60%);
+    --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
 
 @layer base {
@@ -202,21 +188,23 @@
         @apply border-border outline-ring/50;
     }
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
     }
-    
-    /* Estilos específicos para sistema dental */
+
+    /* Gradiente premium para botones y headers */
     .dental-gradient {
-        background: linear-gradient(135deg, hsl(199 89% 48%) 0%, hsl(187 100% 42%) 100%);
+        @apply bg-gradient-to-r from-primary to-secondary text-white;
     }
-    
+
+    /* Hover sutil y moderno para las tarjetas */
     .dental-card-hover {
-        @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+        @apply border border-transparent transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/10 hover:shadow-lg hover:shadow-primary/5;
     }
-    
-    /* Mejoras de accesibilidad para el consultorio */
+
+    /* Mejoras de accesibilidad visual */
     button:focus-visible,
-    a:focus-visible {
-        @apply ring-2 ring-primary ring-offset-2 ring-offset-background;
+    a:focus-visible,
+    input:focus-visible {
+        @apply ring-2 ring-primary ring-offset-2 ring-offset-background outline-none;
     }
 }

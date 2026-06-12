@@ -1,22 +1,32 @@
 <script lang="ts">
     import { Link } from '@inertiajs/svelte';
+
     import {
-        DollarSign,
         LayoutGrid,
         Settings,
         MessageSquare,
         BarChart3,
-        UserCog,
-        Activity,
         CreditCard,
+        Wallet,
+        Calendar,
+        Users,
+        ClipboardList,
+        Receipt,
+        Megaphone,
+        Gift,
+        Star,
+        Building2,
+        UserRoundCog,
+        Stethoscope,
+        Shield,
     } from 'lucide-svelte';
-    import Calendar from 'lucide-svelte/icons/calendar';
-    import Users from 'lucide-svelte/icons/users';
+
     import type { Snippet } from 'svelte';
-    import AppLogo from '@/components/AppLogo.svelte';
+
     import NavFooter from '@/components/NavFooter.svelte';
     import NavMain from '@/components/NavMain.svelte';
     import NavUser from '@/components/NavUser.svelte';
+
     import {
         Sidebar,
         SidebarContent,
@@ -26,55 +36,203 @@
         SidebarMenuButton,
         SidebarMenuItem,
     } from '@/components/ui/sidebar';
+
     import { toUrl } from '@/lib/utils';
     import { dashboard } from '@/routes';
-    import { index as patientsIndex } from '@/routes/patients';
-    import { index as appointmentsIndex } from '@/routes/appointments';
-    import { index as treatmentsIndex } from '@/routes/treatments';
-    import { index as paymentsIndex } from '@/routes/payments';
     import type { NavItem } from '@/types';
 
-    let {
-        children,
-    }: {
-        children?: Snippet;
-    } = $props();
+    let { children }: { children?: Snippet } = $props();
 
-    const menuItems: NavItem[] = [
-        { title: 'Panel Principal', href: dashboard(), icon: LayoutGrid },
-        { title: 'Pacientes', href: patientsIndex(), icon: Users },
-        { title: 'Citas', href: appointmentsIndex(), icon: Calendar },
-        { title: 'Tratamientos', href: treatmentsIndex(), icon: Activity },
-        { title: 'Pagos', href: paymentsIndex(), icon: CreditCard },
-        { title: 'Reportes', href: '/reportes', icon: BarChart3 },
-        { title: 'Gestión de Staff', href: '/staff', icon: UserCog },
-        { title: 'Mensajes (CRM)', href: '/mensajes', icon: MessageSquare },
-        { title: 'Configuración', href: '/configuracion', icon: Settings },
+    const mainItems: NavItem[] = [
+        {
+            title: 'Panel Principal',
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+        {
+            title: 'Recepción',
+            icon: Users,
+            children: [
+                {
+                    title: 'Pacientes',
+                    href: '/patients',
+                    icon: Users,
+                },
+                {
+                    title: 'Citas',
+                    href: '/appointments',
+                    icon: Calendar,
+                },
+            ],
+        },
+        {
+            title: 'Clínica',
+            icon: Stethoscope,
+            children: [
+                {
+                    title: 'Tratamientos',
+                    href: '/treatments',
+                    icon: ClipboardList,
+                },
+            ],
+        },
+        {
+            title: 'Facturación',
+            icon: Receipt,
+            children: [
+                {
+                    title: 'Caja',
+                    href: '/cashbox',
+                    icon: Wallet,
+                },
+                {
+                    title: 'Pagos',
+                    href: '/payments',
+                    icon: CreditCard,
+                },
+                {
+                    title: 'Reportes',
+                    href: '/reportes',
+                    icon: BarChart3,
+                },
+            ],
+        },
     ];
 
-    const analisisItems: NavItem[] = [
-        { title: 'Facturación', href: '/facturacion', icon: DollarSign },
-        { title: 'Reportes', href: '/reportes', icon: BarChart3 },
+    const adminItems: NavItem[] = [
+        {
+            title: 'Marketing y Bot',
+            icon: Megaphone,
+            roles: ['Administrador'],
+            children: [
+                {
+                    title: 'Mensajes (CRM)',
+                    href: '/mensajes',
+                    icon: MessageSquare,
+                },
+                {
+                    title: 'Promociones',
+                    href: '/promotions',
+                    icon: Megaphone,
+                },
+                {
+                    title: 'Sorteos',
+                    href: '/raffles',
+                    icon: Gift,
+                },
+                {
+                    title: 'Valoraciones',
+                    href: '/ratings',
+                    icon: Star,
+                },
+            ],
+        },
+        {
+            title: 'Administración',
+            icon: Building2,
+            roles: ['Administrador'],
+            children: [
+                {
+                    title: 'Staff',
+                    href: '/staff',
+                    icon: UserRoundCog,
+                },
+                {
+                    title: 'Roles y Permisos',
+                    href: '/roles',
+                    icon: Shield,
+                },
+                {
+                    title: 'Configuración',
+                    href: '/configuracion',
+                    icon: Settings,
+                },
+            ],
+        },
     ];
+    import { page } from '@inertiajs/svelte';
 
-    const sistemaItems: NavItem[] = [
-        { title: 'Staff', href: '/staff', icon: UserCog },
-        { title: 'Configuración', href: '/configuracion', icon: Settings },
-    ];
+    const userRoles = $derived(page.props.auth.user?.roles || []);
+    const userPermissions = $derived(page.props.auth.user?.permissions || []);
+
+    function hasAccess(item: NavItem): boolean {
+        // Si el usuario es Administrador, tiene acceso a todo
+        if (userRoles.includes('Administrador')) return true;
+
+        let access = true;
+        
+        if (item.roles && item.roles.length > 0) {
+            access = item.roles.some(role => userRoles.includes(role));
+        }
+        
+        if (access && item.permissions && item.permissions.length > 0) {
+            access = item.permissions.some(permission => userPermissions.includes(permission));
+        }
+
+        return access;
+    }
+
+    function filterItems(items: NavItem[]): NavItem[] {
+        return items
+            .filter(hasAccess)
+            .map(item => {
+                if (item.children) {
+                    return { ...item, children: filterItems(item.children) };
+                }
+                return item;
+            })
+            .filter(item => !item.children || item.children.length > 0);
+    }
+
+    const filteredMainItems = $derived(filterItems(mainItems));
+    const filteredAdminItems = $derived(filterItems(adminItems));
 </script>
 
-<Sidebar collapsible="icon" variant="inset">
-    <SidebarHeader>
+<Sidebar
+    collapsible="icon"
+    variant="inset"
+    class="border-r border-slate-200 dark:border-slate-800"
+>
+    <SidebarHeader class="py-4">
         <SidebarMenu>
             <SidebarMenuItem>
-                <SidebarMenuButton size="lg" asChild>
+                <SidebarMenuButton
+                    size="lg"
+                    asChild
+                    class="hover:bg-transparent hover:opacity-80 transition-opacity"
+                >
                     {#snippet children(props)}
                         <Link
                             {...props}
                             href={toUrl(dashboard())}
-                            class={props.class}
+                            class="{props.class} flex items-center gap-3"
                         >
-                            <AppLogo />
+                            <div
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 via-cyan-500 to-teal-500 shadow-lg"
+                            >
+                                <Stethoscope class="h-5 w-5 text-white" />
+                            </div>
+
+                            <div
+                                class="flex flex-col truncate group-data-[collapsible=icon]:hidden"
+                            >
+                                <span
+                                    class="text-base font-bold tracking-tight text-slate-900 dark:text-white"
+                                >
+                                    Panel
+                                    <span
+                                        class="text-blue-600 dark:text-cyan-400"
+                                    >
+                                        Dental
+                                    </span>
+                                </span>
+
+                                <span
+                                    class="text-[10px] uppercase tracking-wider text-slate-500"
+                                >
+                                    Gestión Clínica
+                                </span>
+                            </div>
                         </Link>
                     {/snippet}
                 </SidebarMenuButton>
@@ -82,14 +240,25 @@
         </SidebarMenu>
     </SidebarHeader>
 
-    <SidebarContent>
-        <NavMain title="MENÚ" items={menuItems} />
-        <NavMain title="ANÁLISIS" items={analisisItems} />
-        <NavMain title="SISTEMA" items={sistemaItems} />
+    <SidebarContent class="px-2">
+        <NavMain
+            title="MENÚ PRINCIPAL"
+            items={filteredMainItems}
+        />
+
+        {#if filteredAdminItems.length > 0}
+            <div class="mx-4 my-2 h-px bg-slate-200 dark:bg-slate-800"></div>
+
+            <NavMain
+                title="SISTEMA"
+                items={filteredAdminItems}
+            />
+        {/if}
     </SidebarContent>
 
     <SidebarFooter>
         <NavUser />
     </SidebarFooter>
 </Sidebar>
+
 {@render children?.()}

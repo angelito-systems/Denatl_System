@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'patient_id', 'amount', 'payment_method', 'receipt_type', 'status', 'notes',
+    'patient_id', 'treatment_contract_id', 'amount', 'payment_method', 'receipt_type', 'status', 'notes',
     'billing_name', 'billing_document', 'sunat_serie', 'sunat_correlativo',
     'sunat_status', 'sunat_hash', 'sunat_xml_path', 'sunat_cdr_path', 'sunat_message'
 ])]
@@ -22,5 +22,10 @@ class Payment extends Model
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    public function treatmentContract(): BelongsTo
+    {
+        return $this->belongsTo(TreatmentContract::class);
     }
 }

@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\Patient;
 use App\Models\Configuration;
+use App\Models\Patient;
+use App\Models\Payment;
 use Spatie\LaravelPdf\Facades\Pdf;
 
 class PdfGeneratorService
@@ -13,9 +14,9 @@ class PdfGeneratorService
     public function __construct()
     {
         $this->clinica = [
-            'nombre'    => Configuration::get('clinica_nombre', 'Clínica Dental System'),
-            'ruc'       => Configuration::get('clinica_ruc', ''),
-            'telefono'  => Configuration::get('clinica_telefono', ''),
+            'nombre' => Configuration::get('clinica_nombre', 'Clínica Dental System'),
+            'ruc' => Configuration::get('clinica_ruc', ''),
+            'telefono' => Configuration::get('clinica_telefono', ''),
             'direccion' => Configuration::get('clinica_direccion', ''),
         ];
     }
@@ -24,7 +25,7 @@ class PdfGeneratorService
     // Configuración de Browsershot (Node / Chrome)
     // ─────────────────────────────────────────────────────────────────────────
 
-    private function applyBrowsershotConfig($pdf)
+    public function applyBrowsershotConfig($pdf)
     {
         return $pdf->withBrowsershot(function ($browsershot) {
             if ($nodePath = env('BROWSERSHOT_NODE_BIN')) {
@@ -51,8 +52,8 @@ class PdfGeneratorService
     {
         $pdf = Pdf::view('pdfs.historia-clinica', [
             'paciente' => $paciente->load(['payments']),
-            'clinica'  => $this->clinica,
-            'fecha'    => now()->format('d/m/Y H:i'),
+            'clinica' => $this->clinica,
+            'fecha' => now()->format('d/m/Y H:i'),
         ]);
 
         return $this->applyBrowsershotConfig($pdf)
@@ -62,29 +63,50 @@ class PdfGeneratorService
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Odontograma
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function generarOdontograma(Patient $paciente, string $htmlContent)
+    {
+        $pdf = Pdf::view('pdfs.odontograma', [
+            'paciente' => $paciente,
+            'clinica' => $this->clinica,
+            'fecha' => now()->format('d/m/Y H:i'),
+            'htmlContent' => $htmlContent,
+        ]);
+
+        return $this->applyBrowsershotConfig($pdf)
+            ->format('a4')
+            ->landscape() // Landscape works better for wide grids like Odontograms
+            ->margins(10, 10, 10, 10)
+            ->name("odontograma_{$paciente->first_name}_{$paciente->last_name}.pdf");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Plantillas (consentimiento, contrato, etc.)
     // ─────────────────────────────────────────────────────────────────────────
 
     public function generarPlantilla(
         Patient $paciente,
         string $tipoPlantilla,
-        ?string $signature      = null,
+        ?string $signature = null,
         ?string $adminSignature = null
     ) {
         $vistas = [
-            'ortodoncia'     => 'pdfs.ortodoncia',
-            'implantes'      => 'pdfs.implantes',
+            'ortodoncia' => 'pdfs.ortodoncia',
+            'implantes' => 'pdfs.implantes',
             'consentimiento' => 'pdfs.consentimiento',
-            'contrato'       => 'pdfs.contrato',
+            'contrato' => 'pdfs.contrato',
+            'financiamiento' => 'pdfs.financiamiento',
         ];
 
         $vista = $vistas[$tipoPlantilla] ?? 'pdfs.contrato';
 
         $pdf = Pdf::view($vista, [
-            'paciente'       => $paciente,
-            'clinica'        => $this->clinica,
-            'fecha'          => now()->format('d/m/Y'),
-            'signature'      => $signature,
+            'paciente' => $paciente,
+            'clinica' => $this->clinica,
+            'fecha' => now()->format('d/m/Y'),
+            'signature' => $signature,
             'adminSignature' => $adminSignature,
         ]);
 
@@ -101,14 +123,14 @@ class PdfGeneratorService
     /**
      * Genera el PDF del comprobante a partir del HTML producido por SunatService.
      *
-     * @param  \App\Models\Payment  $pago
-     * @param  string               $format   'ticket' (80 mm térmica) | 'a4'
-     * @param  bool                 $isNota   true para Notas de Crédito/Débito
+     * @param  Payment  $pago
+     * @param  string  $format  'ticket' (80 mm térmica) | 'a4'
+     * @param  bool  $isNota  true para Notas de Crédito/Débito
      */
     public function generarComprobante($pago, string $format = 'ticket', bool $isNota = false)
     {
-        /** @var \App\Services\SunatService $sunat */
-        $sunat = app(\App\Services\SunatService::class);
+        /** @var SunatService $sunat */
+        $sunat = app(SunatService::class);
 
         // getHtmlReport construye el QR, extrae el hash y renderiza la plantilla
         $html = $sunat->getHtmlReport($pago, $format, $isNota);

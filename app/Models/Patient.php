@@ -2,19 +2,19 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Database\Factories\PatientFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Casts\Attribute;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Patient extends Model implements HasMedia
 {
-    /** @use HasFactory<\Database\Factories\PatientFactory> */
+    /** @use HasFactory<PatientFactory> */
     use HasFactory, InteractsWithMedia, SoftDeletes;
 
     protected $fillable = [
@@ -33,7 +33,7 @@ class Patient extends Model implements HasMedia
         'allergies',
         'medical_notes',
         'family_history',
-        'current_medication'
+        'current_medication',
     ];
 
     protected $appends = ['age'];
@@ -49,7 +49,7 @@ class Patient extends Model implements HasMedia
     {
         return Attribute::make(
             get: fn (mixed $value, array $attributes) => isset($attributes['date_of_birth']) && $attributes['date_of_birth']
-                ? Carbon::parse($attributes['date_of_birth'])->age 
+                ? Carbon::parse($attributes['date_of_birth'])->age
                 : null,
         );
     }
@@ -64,13 +64,33 @@ class Patient extends Model implements HasMedia
         return $this->hasMany(Document::class);
     }
 
-    public function treatments()
+    public function evolutions()
     {
-        return $this->hasMany(Treatment::class);
+        return $this->hasMany(Evolution::class)->orderBy('created_at', 'desc');
     }
 
-    public function appointments()
+    public function latestEvolution()
+    {
+        return $this->hasOne(Evolution::class)->latestOfMany();
+    }
+
+    public function appointments(): HasMany
     {
         return $this->hasMany(Appointment::class);
+    }
+
+    public function treatmentContracts(): HasMany
+    {
+        return $this->hasMany(TreatmentContract::class);
+    }
+
+    public function conversations()
+    {
+        return $this->hasMany(Conversation::class);
+    }
+
+    public function whatsappMessages()
+    {
+        return $this->hasManyThrough(WhatsappMessage::class, Conversation::class);
     }
 }

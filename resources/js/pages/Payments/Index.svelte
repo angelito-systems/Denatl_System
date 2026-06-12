@@ -29,6 +29,7 @@
     import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
     import { QZTrayService, type TicketData } from '@/lib/utils/qztray';
     import PdfViewerModal from '@/components/PdfViewerModal.svelte';
+    import SendWhatsappButton from '@/components/SendWhatsappButton.svelte';
 
     let { payments, patients, filters } = $props();
 
@@ -44,6 +45,7 @@
     let isPaymentModalOpen = $state(false);
     const paymentForm = useForm({
         patient_id: '',
+        treatment_contract_id: '',
         amount: '',
         payment_method: 'Efectivo',
         receipt_type: 'Boleta',
@@ -59,6 +61,48 @@
         billing_name: ''
     });
 
+    let patientSearchQuery = $state('');
+    let showPatientDropdown = $state(false);
+    let filteredPatients = $derived(
+        patients.filter(p => {
+            if (!patientSearchQuery) return true;
+            const q = patientSearchQuery.toLowerCase();
+            return (p.first_name?.toLowerCase().includes(q) || 
+                    p.last_name?.toLowerCase().includes(q) || 
+                    p.dni?.includes(q) ||
+                    p.phone?.includes(q));
+        })
+    );
+
+    let selectedPatientDetails = $derived(
+        patients.find(pt => pt.id.toString() === paymentForm.patient_id) || null
+    );
+
+    $effect(() => {
+        if (paymentForm.patient_id) {
+            const p = selectedPatientDetails;
+            if (p && !showPatientDropdown) {
+                patientSearchQuery = `${p.first_name} ${p.last_name} (${p.dni})`;
+            }
+        } else if (!showPatientDropdown) {
+            patientSearchQuery = '';
+            paymentForm.treatment_contract_id = '';
+        }
+    });
+
+    function onContractChange(contractId: string) {
+        if (!contractId || contractId === 'none') {
+            paymentForm.treatment_contract_id = '';
+            return;
+        }
+        paymentForm.treatment_contract_id = contractId;
+        const contract = selectedPatientDetails?.treatment_contracts?.find((c: any) => c.id.toString() === contractId);
+        if (contract) {
+            const suggestedAmount = Math.min(Number(contract.installment_amount || contract.balance_due), Number(contract.balance_due));
+            paymentForm.amount = suggestedAmount > 0 ? suggestedAmount.toString() : contract.balance_due;
+        }
+    }
+
     // WhatsApp Modal State
     let isWhatsAppModalOpen = $state(false);
     let selectedPaymentForWa = $state<any>(null);
@@ -72,30 +116,51 @@
         }, 300);
     }
 
-    async function printTicket(payment: any) {
+    async function fetchPdfBase64(paymentId: number): Promise<string> {
+        const res = await fetch(`/pagos/${paymentId}/pdf-base64`);
+        if (!res.ok) throw new Error('Error al obtener el PDF');
+        const data = await res.json();
+        return data.base64 as string;
+    }
+
+    async function printAndShow(paymentId: number) {
+        // 1. Fetch PDF as base64 from server (no HTTPS issues for QZ Tray)
+        let base64: string;
+        try {
+            base64 = await fetchPdfBase64(paymentId);
+        } catch (e) {
+            toast.error('Error al generar el PDF del comprobante.');
+            return;
+        }
+
+        // 2. Show in PDF viewer using a blob URL (works in browser)
+        const binaryStr = atob(base64);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        pdfViewerUrl = URL.createObjectURL(blob);
+        pdfViewerTitle = `Comprobante ${paymentId}`;
+        isPdfViewerOpen = true;
+
+        // 3. Auto-print via QZ Tray using base64 (bypasses SSL cert problem)
         try {
             const printers = await QZTrayService.getPrinters();
             if (printers.length === 0) {
-                toast.error('No se encontraron impresoras instaladas.');
+                toast.warning('PDF abierto. No se encontraron impresoras para imprimir.');
                 return;
             }
-            // If the user has a selected printer in configs, we should ideally use that.
-            // But we don't have access to global configs here. Let's try to get it from QZ Tray list,
-            // or we'll just prompt/use default. Assuming the default is what they want, or we fetch config.
-            // For now, we'll just use the first printer, or the user can select it later.
-            // Wait, actually, let's just ask the backend for the configured printer or pass it via props.
-            // Since we don't have it as prop right now, we will use printers[0]
-            const printer = printers[0]; // TODO: use configured printer
-            
-            const pdfUrl = `${window.location.origin}/pagos/${payment.id}/pdf`;
-            
+            const printer = printers[0];
             toast.info('Enviando ticket a la impresora...');
-            await QZTrayService.imprimirPdf(printer, pdfUrl);
+            await QZTrayService.imprimirPdfBase64(printer, base64);
             toast.success('Ticket enviado a la impresora exitosamente.');
         } catch (e) {
             console.error(e);
-            toast.error('Error al imprimir el ticket. Asegúrese de que QZ Tray esté corriendo.');
+            toast.warning('PDF mostrado. QZ Tray no pudo imprimir automáticamente.');
         }
+    }
+
+    async function printTicket(payment: any) {
+        await printAndShow(payment.id);
     }
 
     function openWhatsAppModal(payment: any) {
@@ -138,19 +203,10 @@
             onSuccess: (pageObj) => {
                 isPaymentModalOpen = false;
                 paymentForm.reset();
-                
-                const flash = pageObj.props.flash as any;
-                if (flash?.auto_print) {
-                    const paymentId = flash?.new_payment_id;
-                    const paymentObj = payments.data.find((p: any) => p.id === paymentId) || {id: paymentId};
-                    
-                    // Show PDF Modal
-                    pdfViewerUrl = `/pagos/${paymentId}/pdf`;
-                    pdfViewerTitle = `Comprobante ${paymentId}`;
-                    isPdfViewerOpen = true;
 
-                    // Automatically trigger print
-                    printTicket(paymentObj);
+                const flash = pageObj.props.flash as any;
+                if (flash?.new_payment_id) {
+                    printAndShow(flash.new_payment_id);
                 }
             }
         });
@@ -277,9 +333,15 @@
                                     <Button variant="ghost" size="icon" class="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onclick={() => { pdfViewerUrl = `/pagos/${payment.id}/pdf`; pdfViewerTitle = `Comprobante ${payment.id}`; isPdfViewerOpen = true; }} title="Ver Comprobante">
                                         <Eye class="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onclick={() => openWhatsAppModal(payment)} title="Enviar por WhatsApp">
-                                        <MessageCircle class="h-4 w-4" />
-                                    </Button>
+                                    <SendWhatsappButton 
+                                        phone={payment.patient?.phone} 
+                                        payment_id={payment.id} 
+                                        type="payment"
+                                        plantilla="pago_confirmado"
+                                        buttonText=""
+                                        variant="ghost"
+                                        class="h-8 w-8 px-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center justify-center"
+                                    />
                                     <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-slate-700 hover:bg-slate-100" onclick={() => printTicket(payment)} title="Imprimir Ticket QZ Tray">
                                         <FileText class="h-4 w-4" />
                                     </Button>
@@ -329,52 +391,108 @@
             </DialogDescription>
         </DialogHeader>
         <form onsubmit={submitPayment} class="space-y-4 pt-4">
-            <div class="grid grid-cols-1 gap-4">
-                <div class="space-y-2">
+            <div class="grid grid-cols-1 gap-5">
+                <div class="space-y-2 relative">
                     <Label>Paciente</Label>
-                    <Select bind:value={paymentForm.patient_id} type="single">
-                        <SelectTrigger>
-                            {paymentForm.patient_id ? patients.find(p => p.id == paymentForm.patient_id)?.first_name + ' ' + patients.find(p => p.id == paymentForm.patient_id)?.last_name : 'Selecciona un paciente...'}
-                        </SelectTrigger>
-                        <SelectContent class="max-h-64">
-                            {#each patients as pt}
-                                <SelectItem value={pt.id.toString()}>{pt.first_name} {pt.last_name}</SelectItem>
-                            {/each}
-                        </SelectContent>
-                    </Select>
+                    <div class="relative">
+                        <Input 
+                            type="text" 
+                            placeholder="Buscar por nombre, DNI o número..." 
+                            bind:value={patientSearchQuery}
+                            class="h-11 rounded-xl pr-8"
+                            onfocus={() => showPatientDropdown = true}
+                            onblur={() => setTimeout(() => showPatientDropdown = false, 200)}
+                        />
+                        {#if paymentForm.patient_id}
+                            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" onclick={() => { paymentForm.patient_id = ''; patientSearchQuery = ''; }}>
+                                ×
+                            </button>
+                        {/if}
+                    </div>
+                    {#if showPatientDropdown}
+                        <div class="absolute z-50 w-full mt-1 max-h-60 overflow-auto rounded-xl border bg-popover text-popover-foreground shadow-md outline-none">
+                            {#if filteredPatients.length === 0}
+                                <div class="p-3 text-sm text-gray-500 text-center">No se encontraron pacientes.</div>
+                            {:else}
+                                {#each filteredPatients as pt}
+                                    <button 
+                                        type="button" 
+                                        class="w-full text-left px-4 py-2.5 text-sm hover:bg-accent hover:text-accent-foreground flex flex-col"
+                                        onclick={() => { 
+                                            paymentForm.patient_id = pt.id.toString(); 
+                                            patientSearchQuery = `${pt.first_name} ${pt.last_name} (${pt.dni})`;
+                                            showPatientDropdown = false;
+                                        }}
+                                    >
+                                        <span class="font-medium">{pt.first_name} {pt.last_name}</span>
+                                        <span class="text-xs text-muted-foreground">DNI: {pt.dni} {pt.phone ? `• Tel: ${pt.phone}` : ''}</span>
+                                    </button>
+                                {/each}
+                            {/if}
+                        </div>
+                    {/if}
                     {#if paymentForm.errors.patient_id}<p class="text-xs text-red-500">{paymentForm.errors.patient_id}</p>{/if}
                 </div>
+
+                {#if selectedPatientDetails?.treatment_contracts && selectedPatientDetails.treatment_contracts.length > 0}
+                    <div class="space-y-2 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <Label class="text-blue-800">Contratos Activos del Paciente</Label>
+                        <Select 
+                            type="single" 
+                            bind:value={paymentForm.treatment_contract_id}
+                            onValueChange={onContractChange}
+                        >
+                            <SelectTrigger class="h-11 rounded-xl bg-white">
+                                {#if paymentForm.treatment_contract_id && paymentForm.treatment_contract_id !== 'none'}
+                                    {@const c = selectedPatientDetails.treatment_contracts.find((ct: any) => ct.id.toString() === paymentForm.treatment_contract_id.toString())}
+                                    {c ? `${c.treatment_name} (Deuda: S/ ${c.balance_due})` : 'Seleccionar contrato...'}
+                                {:else}
+                                    Pago Libre (Sin Contrato)
+                                {/if}
+                            </SelectTrigger>
+                            <SelectContent class="rounded-xl">
+                                <SelectItem value="none" class="rounded-lg">Pago Libre (Sin Contrato)</SelectItem>
+                                {#each selectedPatientDetails.treatment_contracts as contract}
+                                    <SelectItem value={contract.id.toString()} class="rounded-lg">
+                                        {contract.treatment_name} (Deuda: S/ {contract.balance_due})
+                                    </SelectItem>
+                                {/each}
+                            </SelectContent>
+                        </Select>
+                        <p class="text-xs text-blue-600/80">Selecciona si el pago abonará a un tratamiento financiado.</p>
+                    </div>
+                {/if}
                 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-5">
                     <div class="space-y-2">
                         <Label>Monto (S/)</Label>
-                        <Input type="number" step="0.01" min="0" bind:value={paymentForm.amount} placeholder="0.00" />
+                        <Input type="number" step="0.01" min="0" bind:value={paymentForm.amount} placeholder="0.00" class="h-11 rounded-xl" />
                         {#if paymentForm.errors.amount}<p class="text-xs text-red-500">{paymentForm.errors.amount}</p>{/if}
                     </div>
                     <div class="space-y-2">
                         <Label>Método de Pago</Label>
                         <Select bind:value={paymentForm.payment_method} type="single">
-                            <SelectTrigger>{paymentForm.payment_method}</SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Efectivo">Efectivo</SelectItem>
-                                <SelectItem value="Tarjeta">Tarjeta</SelectItem>
-                                <SelectItem value="Transferencia">Transferencia</SelectItem>
-                                <SelectItem value="Yape/Plin">Yape/Plin</SelectItem>
+                            <SelectTrigger class="h-11 rounded-xl">{paymentForm.payment_method}</SelectTrigger>
+                            <SelectContent class="rounded-xl">
+                                <SelectItem value="Efectivo" class="rounded-lg">Efectivo</SelectItem>
+                                <SelectItem value="Tarjeta" class="rounded-lg">Tarjeta</SelectItem>
+                                <SelectItem value="Transferencia" class="rounded-lg">Transferencia</SelectItem>
+                                <SelectItem value="Yape/Plin" class="rounded-lg">Yape/Plin</SelectItem>
                             </SelectContent>
                         </Select>
                         {#if paymentForm.errors.payment_method}<p class="text-xs text-red-500">{paymentForm.errors.payment_method}</p>{/if}
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-5">
                     <div class="space-y-2">
                         <Label>Tipo Comprobante</Label>
                         <Select bind:value={paymentForm.receipt_type} type="single">
-                            <SelectTrigger>{paymentForm.receipt_type}</SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Boleta">Boleta</SelectItem>
-                                <SelectItem value="Factura">Factura</SelectItem>
-                                <SelectItem value="Ticket">Ticket (Interno)</SelectItem>
+                            <SelectTrigger class="h-11 rounded-xl">{paymentForm.receipt_type}</SelectTrigger>
+                            <SelectContent class="rounded-xl">
+                                <SelectItem value="Boleta" class="rounded-lg">Boleta</SelectItem>
+                                <SelectItem value="Factura" class="rounded-lg">Factura</SelectItem>
+                                <SelectItem value="Ticket" class="rounded-lg">Ticket (Interno)</SelectItem>
                             </SelectContent>
                         </Select>
                         {#if paymentForm.errors.receipt_type}<p class="text-xs text-red-500">{paymentForm.errors.receipt_type}</p>{/if}
@@ -382,10 +500,10 @@
                     <div class="space-y-2">
                         <Label>Estado</Label>
                         <Select bind:value={paymentForm.status} type="single">
-                            <SelectTrigger>{paymentForm.status}</SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Pagado">Pagado</SelectItem>
-                                <SelectItem value="Pendiente">Pendiente</SelectItem>
+                            <SelectTrigger class="h-11 rounded-xl">{paymentForm.status}</SelectTrigger>
+                            <SelectContent class="rounded-xl">
+                                <SelectItem value="Pagado" class="rounded-lg">Pagado</SelectItem>
+                                <SelectItem value="Pendiente" class="rounded-lg">Pendiente</SelectItem>
                             </SelectContent>
                         </Select>
                         {#if paymentForm.errors.status}<p class="text-xs text-red-500">{paymentForm.errors.status}</p>{/if}
@@ -394,7 +512,7 @@
 
                 <div class="space-y-2">
                     <Label>Notas (Opcional)</Label>
-                    <Input type="text" bind:value={paymentForm.notes} placeholder="Concepto del pago..." />
+                    <Input type="text" bind:value={paymentForm.notes} placeholder="Concepto del pago..." class="h-11 rounded-xl" />
                     {#if paymentForm.errors.notes}<p class="text-xs text-red-500">{paymentForm.errors.notes}</p>{/if}
                 </div>
             </div>
