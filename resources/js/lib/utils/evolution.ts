@@ -1,4 +1,4 @@
-import { page } from '@inertiajs/svelte';
+import { page, router } from '@inertiajs/svelte';
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { writable } from 'svelte/store';
@@ -147,8 +147,19 @@ function createEvolutionSocket() {
                             message?.message?.extendedTextMessage?.text ??
                             '📎 Multimedia';
 
+                        const isHelpRequest = text.trim() === '9';
+
+                        let title = isHelpRequest ? '🚨 ¡Asistencia Requerida!' : 'Nuevo mensaje';
+                        let toastBody = isHelpRequest 
+                            ? `El paciente ${senderName} necesita ayuda. ¡Por favor haz clic para entrar al chat!`
+                            : `"${text.length > 50 ? text.substring(0, 50) + '...' : text}"`;
+                            
+                        let chromeBody = isHelpRequest
+                            ? `El usuario ${senderName} necesita ayuda por favor da click o entra al chat de ${senderName}`
+                            : `${senderName}: ${text.length > 50 ? text.substring(0, 50) + '...' : text}`;
+
                         Toast.info(
-                            'Nuevo mensaje',
+                            title,
                             `
                             <b>${senderName}</b>
                             <span class="text-xs ml-1">
@@ -156,10 +167,22 @@ function createEvolutionSocket() {
                             </span>
 
                             <div class="mt-2 p-2 rounded text-sm italic">
-                                "${text}"
+                                ${toastBody}
                             </div>
+                            <div class="mt-1 text-xs text-blue-600 font-medium">👉 Revisa el CRM de Mensajes</div>
                             `,
                         );
+
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                            const notif = new Notification(title, {
+                                body: chromeBody,
+                                icon: '/favicon.ico'
+                            });
+                            notif.onclick = () => {
+                                window.focus();
+                                router.visit('/mensajes');
+                            };
+                        }
                     }
                 }
 

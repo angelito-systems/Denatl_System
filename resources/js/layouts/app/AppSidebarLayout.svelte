@@ -4,8 +4,10 @@
     import AppShell from '@/components/AppShell.svelte';
     import AppSidebar from '@/components/AppSidebar.svelte';
     import AppSidebarHeader from '@/components/AppSidebarHeader.svelte';
+    import { onMount } from 'svelte';
     import { Toaster } from '@/components/ui/sonner';
     import type { BreadcrumbItem } from '@/types';
+    import { evolutionWs } from '@/lib/utils/evolution';
 
     let {
         breadcrumbs = [],
@@ -14,6 +16,10 @@
         breadcrumbs?: BreadcrumbItem[];
         children?: Snippet;
     } = $props();
+
+    onMount(() => {
+        evolutionWs.connect();
+    });
 </script>
 
 <AppShell variant="sidebar" class="bg-slate-50 dark:bg-slate-950">

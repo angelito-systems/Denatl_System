@@ -60,6 +60,22 @@
         form.phone = conv.phone_number;
         currentMessages = conv.messages || [];
 
+        // ENVIAR MENSAJE AUTOMATICO AL ABRIR CHAT ASIGNADO
+        if (conv.bot_status === 'human_assigned' && !conv.assigned_message_sent) {
+            const userName = page.props.auth?.user?.name || 'especializado';
+            const autoMessage = `Te hemos asignado al asesor ${userName}. Actualmente se encuentra conectado y atenderá tu consulta en breve. Por favor espera unos momentos mientras revisa tu caso.`;
+            
+            router.post('/mensajes/send', {
+                phone: conv.phone_number,
+                message: autoMessage
+            }, { 
+                preserveScroll: true,
+                onSuccess: () => {
+                    conv.assigned_message_sent = true;
+                }
+            });
+        }
+
         // Auto-scroll al fondo al cargar
         setTimeout(() => {
             const chatContainer = document.getElementById(
@@ -74,12 +90,39 @@
         e.preventDefault();
         if (!selectedConversation) return;
 
+        const sentMessageContent = form.message;
+
         form.post('/mensajes/send', {
             preserveScroll: true,
             onSuccess: () => {
-                // No simulamos mensaje localmente, confiamos en el WebSocket para inyectarlo en tiempo real
-                // y así evitamos duplicados.
+                // Actualización optimista: inyectamos el mensaje en la UI sin esperar
+                const newMessage = {
+                    sender_type: 'advisor',
+                    content: sentMessageContent,
+                    type: 'text',
+                    media_url: null,
+                    created_at: new Date().toISOString(),
+                };
+
+                currentMessages = [...currentMessages, newMessage];
+
+                let conv = conversations.find((c) => c.id === selectedConversationId);
+                if (conv) {
+                    conv.last_message_at = new Date().toISOString();
+                    if (!conv.messages) conv.messages = [];
+                    conv.messages.push(newMessage);
+                    conversations = [...conversations].sort(
+                        (a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+                    );
+                }
+
                 form.reset('message');
+
+                // Auto-scroll al fondo
+                setTimeout(() => {
+                    const chatContainer = document.getElementById('chat-messages-container');
+                    if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+                }, 100);
             },
         });
     }
@@ -242,39 +285,7 @@
                 conversations = [newConv, ...conversations];
             }
 
-            // Notificar si es mensaje nuevo
-            if (!message?.key?.fromMe) {
-                const senderName = message?.pushName || 'Un paciente';
-                const previewText = text.length > 40 ? text.substring(0, 40) + '...' : text;
-
-                // Alerta in-app (Toast)
-                toast.info(`Nuevo mensaje de ${senderName}`, {
-                    description: previewText,
-                    action: {
-                        label: 'Ver',
-                        onClick: () => {
-                            let convToSelect = conversations.find((c) => c.phone_number === phone);
-                            if (convToSelect) selectConversation(convToSelect);
-                        }
-                    }
-                });
-
-                // Google Web Notifications API
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    const notif = new Notification('Nuevo mensaje recibido', {
-                        body: `${senderName} ha enviado un nuevo mensaje.`,
-                        icon: '/favicon.ico'
-                    });
-                    
-                    notif.onclick = () => {
-                        window.focus();
-                        let convToSelect = conversations.find((c) => c.phone_number === phone);
-                        if (convToSelect) {
-                            selectConversation(convToSelect);
-                        }
-                    };
-                }
-            }
+            // Las notificaciones globales ahora se manejan en evolution.ts
         });
 
         return () => {
