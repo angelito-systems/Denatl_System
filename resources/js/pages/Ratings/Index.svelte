@@ -11,8 +11,24 @@
         TableHeader,
         TableRow,
     } from '@/components/ui/table';
+    import {
+        Dialog,
+        DialogContent,
+        DialogHeader,
+        DialogTitle,
+        DialogDescription,
+    } from '@/components/ui/dialog';
 
     let { ratings } = $props();
+
+    let selectedRating = $state<any | null>(null);
+    let isCommentModalOpen = $state(false);
+
+    function openCommentModal(rating: any) {
+        if (!rating.comment) return;
+        selectedRating = rating;
+        isCommentModalOpen = true;
+    }
 
     function deleteRating(id: number) {
         if (confirm('¿Estás seguro de eliminar esta valoración?')) {
@@ -91,7 +107,11 @@
                                         <span class="ml-2 text-sm font-medium text-foreground">{rating.score}/5</span>
                                     </div>
                                 </TableCell>
-                                <TableCell class="max-w-md truncate">
+                                <TableCell 
+                                    class="max-w-[200px] md:max-w-md truncate cursor-pointer hover:bg-gray-50 transition-colors"
+                                    ondblclick={() => openCommentModal(rating)}
+                                    title="Doble clic para ver comentario completo"
+                                >
                                     {rating.comment || '-'}
                                 </TableCell>
                                 <TableCell>
@@ -117,3 +137,44 @@
         </div>
     </div>
 </div>
+
+<Dialog bind:open={isCommentModalOpen}>
+    <DialogContent>
+        <DialogHeader>
+            <DialogTitle>Detalle de Valoración</DialogTitle>
+        </DialogHeader>
+        {#if selectedRating}
+        <div class="mt-4 space-y-4 text-sm">
+            <div class="flex flex-col gap-1">
+                <span class="font-semibold text-gray-700">Paciente:</span>
+                <span class="text-gray-900">{selectedRating.patient ? `${selectedRating.patient.first_name} ${selectedRating.patient.last_name}` : 'Anónimo'}</span>
+            </div>
+            <div class="flex flex-col gap-1">
+                <span class="font-semibold text-gray-700">Fecha:</span>
+                <span class="text-gray-900">{formatDate(selectedRating.created_at)}</span>
+            </div>
+            <div class="flex flex-col gap-1">
+                <span class="font-semibold text-gray-700">Calificación:</span>
+                <div class="flex items-center gap-1 text-yellow-500">
+                    {#each Array(5) as _, i}
+                        <Star class="h-4 w-4 {i < selectedRating.score ? 'fill-current' : 'text-gray-300'}" />
+                    {/each}
+                    <span class="ml-2 font-medium text-gray-900">{selectedRating.score}/5</span>
+                </div>
+            </div>
+            <div class="flex flex-col gap-1">
+                <span class="font-semibold text-gray-700">Origen:</span>
+                <span class="inline-flex items-center w-fit px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {selectedRating.source || 'Bot'}
+                </span>
+            </div>
+            <div class="flex flex-col gap-1">
+                <span class="font-semibold text-gray-700">Comentario:</span>
+                <div class="bg-gray-50 p-3 rounded-md text-gray-800 whitespace-pre-wrap border border-gray-100">
+                    {selectedRating.comment}
+                </div>
+            </div>
+        </div>
+        {/if}
+    </DialogContent>
+</Dialog>

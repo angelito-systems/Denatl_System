@@ -39,6 +39,8 @@
         icon: AlertTriangle,
         color: 'text-slate-500'
     });
+
+    const Icon = $derived(error.icon);
 </script>
 
 <AppHead title={error.title} />
@@ -46,7 +48,6 @@
 <div class="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4 text-center">
     <div class="max-w-md w-full flex flex-col items-center gap-6">
         <div class="h-24 w-24 rounded-full bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center">
-            {@const Icon = error.icon}
             <Icon class="h-12 w-12 {error.color}" />
         </div>
         

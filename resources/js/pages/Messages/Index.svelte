@@ -19,6 +19,8 @@
     import AppHead from '@/components/AppHead.svelte';
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
+    import { Toaster } from '@/components/ui/sonner';
+    import { toast } from 'svelte-sonner';
 
     import { evolutionWs } from '@/lib/utils/evolution';
 
@@ -50,6 +52,10 @@
     );
 
     function selectConversation(conv: any) {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
         selectedConversationId = conv.id;
         form.phone = conv.phone_number;
         currentMessages = conv.messages || [];
@@ -84,6 +90,9 @@
                 selectedConversation.bot_status === 'active'
                     ? 'human_assigned'
                     : 'active';
+            
+            const currentPhone = selectedConversation.phone_number;
+
             router.post(
                 `/mensajes/${selectedConversation.id}/toggle-bot`,
                 { status: newStatus },
@@ -92,6 +101,15 @@
                     onSuccess: () => {
                         selectedConversation.bot_status = newStatus;
                         conversations = [...conversations]; // trigger reactivity
+
+                        const autoMessage = newStatus === 'human_assigned' 
+                            ? 'Te hemos asignado un asesor especializado. Actualmente se encuentra conectado y atenderá tu consulta en breve. Por favor espera unos momentos mientras revisa tu caso.' 
+                            : 'Hola nuevamente. Estoy de vuelta para ayudarte con cualquier consulta o gestión que necesites. 😊';
+
+                        router.post('/mensajes/send', {
+                            phone: currentPhone,
+                            message: autoMessage
+                        }, { preserveScroll: true });
                     },
                 },
             );
@@ -222,6 +240,40 @@
                     ],
                 };
                 conversations = [newConv, ...conversations];
+            }
+
+            // Notificar si es mensaje nuevo
+            if (!message?.key?.fromMe) {
+                const senderName = message?.pushName || 'Un paciente';
+                const previewText = text.length > 40 ? text.substring(0, 40) + '...' : text;
+
+                // Alerta in-app (Toast)
+                toast.info(`Nuevo mensaje de ${senderName}`, {
+                    description: previewText,
+                    action: {
+                        label: 'Ver',
+                        onClick: () => {
+                            let convToSelect = conversations.find((c) => c.phone_number === phone);
+                            if (convToSelect) selectConversation(convToSelect);
+                        }
+                    }
+                });
+
+                // Google Web Notifications API
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    const notif = new Notification('Nuevo mensaje recibido', {
+                        body: `${senderName} ha enviado un nuevo mensaje.`,
+                        icon: '/favicon.ico'
+                    });
+                    
+                    notif.onclick = () => {
+                        window.focus();
+                        let convToSelect = conversations.find((c) => c.phone_number === phone);
+                        if (convToSelect) {
+                            selectConversation(convToSelect);
+                        }
+                    };
+                }
             }
         });
 
@@ -577,3 +629,5 @@
         {/if}
     </div>
 </div>
+
+<Toaster position="top-right" />

@@ -70,7 +70,7 @@ class WhatsappBotService
                 $this->sendTypingIndicator($conversation->phone_number);
                 $this->sendMessage($conversation->phone_number, "👋 *¡Volviendo al menú principal!*\n\n¿En qué más puedo ayudarte?");
                 sleep(1);
-                $this->setMenuState($conversation);
+                $this->setMenuState($conversation, true);
             } else {
                 $this->setWelcomeState($conversation);
             }
@@ -124,7 +124,7 @@ class WhatsappBotService
                 break;
             default:
                 if ($conversation->patient_id) {
-                    $this->setMenuState($conversation);
+                    $this->setMenuState($conversation, true);
                 } else {
                     $this->setWelcomeState($conversation);
                 }
@@ -181,7 +181,7 @@ class WhatsappBotService
 
         $this->sendMessage($conversation->phone_number, $reply);
         sleep(1);
-        $this->setMenuState($conversation);
+        $this->setMenuState($conversation, true);
     }
 
     protected function getGreeting()
@@ -322,7 +322,7 @@ class WhatsappBotService
         $this->sendMessage($conversation->phone_number, $info);
         sleep(2);
 
-        $this->setMenuState($conversation);
+        $this->setMenuState($conversation, true);
     }
 
     /**
@@ -336,37 +336,44 @@ class WhatsappBotService
         $this->handleWelcome($conversation, '');
     }
 
-    public function setMenuState(Conversation $conversation)
+    public function setMenuState(Conversation $conversation, bool $sendMessage = false)
     {
         $conversation->update(['bot_state' => self::STATE_MAIN_MENU]);
 
-        $patient = Patient::find($conversation->patient_id);
-        $firstName = $patient ? explode(' ', $patient->first_name)[0] : '';
+        if ($sendMessage) {
+            $patient = Patient::find($conversation->patient_id);
+            $firstName = $patient ? explode(' ', $patient->first_name)[0] : '';
 
-        $menu = "🦷✨ *MENÚ PRINCIPAL* ✨🦷\n\n";
-        if ($firstName) {
-            $menu .= "¡Hola, *{$firstName}*! ¿En qué puedo ayudarte?\n\n";
+            $menu = "🦷✨ *MENÚ PRINCIPAL* ✨🦷\n\n";
+            if ($firstName) {
+                $menu .= "¡Hola, *{$firstName}*! ¿En qué puedo ayudarte?\n\n";
+            }
+            $menu .= "Escribe el *número* de la opción que deseas:\n\n";
+            $menu .= "1️⃣ 📅 *Agendar nueva cita*\n";
+            $menu .= "2️⃣ 📋 *Ver mis próximas citas*\n";
+            $menu .= "3️⃣ 💰 *Consultar mis deudas*\n";
+            $menu .= "4️⃣ 🔄 *Reprogramar una cita*\n";
+            $menu .= "5️⃣ 📝 *Confirmar cita pendiente*\n";
+            $menu .= "6️⃣ 🦷 *Campañas y promociones*\n";
+            $menu .= "7️⃣ 🎁 *Sorteos vigentes*\n";
+            $menu .= "8️⃣ 🧾 *Historial de pagos*\n";
+            $menu .= "9️⃣ 👩‍💼 *Hablar con un asesor*\n";
+            $menu .= "0️⃣ ⭐ *Valorar nuestro servicio*\n\n";
+            $menu .= "💡 _También puedes escribir *'salir'* o *'cancelar'* en cualquier momento para volver aquí._";
+
+            $this->sendMessage($conversation->phone_number, $menu);
         }
-        $menu .= "Escribe el *número* de la opción que deseas:\n\n";
-        $menu .= "1️⃣ 📅 *Agendar nueva cita*\n";
-        $menu .= "2️⃣ 📋 *Ver mis próximas citas*\n";
-        $menu .= "3️⃣ 💰 *Consultar mis deudas*\n";
-        $menu .= "4️⃣ 🔄 *Reprogramar una cita*\n";
-        $menu .= "5️⃣ 📝 *Confirmar cita pendiente*\n";
-        $menu .= "6️⃣ 🦷 *Campañas y promociones*\n";
-        $menu .= "7️⃣ 🎁 *Sorteos vigentes*\n";
-        $menu .= "8️⃣ 🧾 *Historial de pagos*\n";
-        $menu .= "9️⃣ 👩‍💼 *Hablar con un asesor*\n";
-        $menu .= "0️⃣ ⭐ *Valorar nuestro servicio*\n\n";
-        $menu .= "💡 _También puedes escribir *'salir'* o *'cancelar'* en cualquier momento para volver aquí._";
-
-        $this->sendMessage($conversation->phone_number, $menu);
     }
 
     protected function handleMainMenu(Conversation $conversation, string $messageText)
     {
         $messageText = trim($messageText);
         
+        if (preg_match('/^ticket\s+(\d+)$/i', $messageText, $matches)) {
+            $this->sendPaymentPdf($conversation, $matches[1]);
+            return;
+        }
+
         switch ($messageText) {
             case '1':
                 $this->startAppointmentFlow($conversation);
@@ -636,7 +643,7 @@ class WhatsappBotService
                 'date' => $appointmentDate,
                 'start_time' => $time,
                 'duration' => 30,
-                'reason' => $reason,
+                'treatment' => $reason,
                 'status' => 'pending',
                 'room' => $defaultDentist->room ?? 'Consultorio General',
                 'notes' => 'Agendado vía WhatsApp Bot',
@@ -710,7 +717,7 @@ class WhatsappBotService
                 $msg .= '*Cita #' . ($index + 1) . "*\n";
                 $msg .= "📅 {$dateFormatted} ({$dayName})\n";
                 $msg .= "⏰ {$apt->start_time}\n";
-                $msg .= "🦷 {$apt->reason}\n";
+                $msg .= "🦷 {$apt->treatment}\n";
                 $msg .= "📌 {$status}\n";
 
                 if ($apt->status === 'pending') {
@@ -825,10 +832,50 @@ class WhatsappBotService
                 $msg .= "─────────────────\n";
             }
             
-            $msg .= "\n💡 _Este mensaje sirve como constancia (Ticket Virtual) de tus pagos._";
+            $msg .= "\n💡 _Este mensaje sirve como constancia (Ticket Virtual) de tus pagos._\n";
+            $msg .= "📥 *Si necesitas el documento en PDF, responde con la palabra TICKET seguida del número (Ej: TICKET {$payments->first()->id}).*";
             $this->sendMessage($conversation->phone_number, $msg);
         }
 
+        sleep(2);
+        $this->setMenuState($conversation);
+    }
+
+    protected function sendPaymentPdf(Conversation $conversation, $paymentId)
+    {
+        $payment = \App\Models\Payment::where('patient_id', $conversation->patient_id)
+            ->where('id', $paymentId)
+            ->first();
+
+        if (!$payment) {
+            $this->sendMessage($conversation->phone_number, "❌ No encontré un ticket de pago válido con ese número para tu cuenta.");
+            return;
+        }
+
+        $this->sendMessage($conversation->phone_number, "⏳ Generando tu comprobante en PDF, un momento por favor...");
+        
+        try {
+            $pdfService = app(\App\Services\PdfGeneratorService::class);
+            $pdf = $pdfService->generarComprobante($payment);
+            $base64 = $pdf->base64();
+            $fileName = "comprobante_pago_{$payment->id}.pdf";
+            
+            $whatsappService = app(\App\Services\WhatsAppService::class);
+            $success = $whatsappService->enviarDocumento(
+                $conversation->phone_number, 
+                $base64, 
+                $fileName, 
+                "🧾 Aquí tienes tu comprobante de pago #PD-{$payment->id}."
+            );
+
+            if (!$success) {
+                $this->sendMessage($conversation->phone_number, "❌ Hubo un error al enviar el archivo PDF. Intenta más tarde.");
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error enviando PDF por Bot: " . $e->getMessage());
+            $this->sendMessage($conversation->phone_number, "❌ Ocurrió un error al generar tu comprobante.");
+        }
+        
         sleep(2);
         $this->setMenuState($conversation);
     }
@@ -868,7 +915,7 @@ class WhatsappBotService
             $botData['reschedule_appointments'][$num] = $apt->id;
 
             $msg .= "*{$num}.* 📅 {$dateFormatted} ⏰ {$apt->start_time}\n";
-            $msg .= "   🦷 {$apt->reason}\n\n";
+            $msg .= "   🦷 {$apt->treatment}\n\n";
         }
 
         $msg .= '✏️ _Escribe el número de la cita a reprogramar_';
@@ -1002,7 +1049,7 @@ class WhatsappBotService
             $botData['confirm_appointments'][$num] = $apt->id;
 
             $msg .= "*{$num}.* 📅 {$dateFormatted} ⏰ {$apt->start_time}\n";
-            $msg .= "   🦷 {$apt->reason}\n\n";
+            $msg .= "   🦷 {$apt->treatment}\n\n";
         }
 
         $msg .= '✏️ _Escribe el número de la cita a confirmar_';
@@ -1031,13 +1078,13 @@ class WhatsappBotService
         $appointment = Appointment::find($appointmentId);
 
         if ($appointment) {
-            $appointment->update(['status' => 'scheduled']);
+            $appointment->update(['status' => 'confirmed']);
             $dateFormatted = Carbon::parse($appointment->date)->format('d/m/Y');
 
             $reply = "✅✨ *¡Cita confirmada exitosamente!*\n\n";
             $reply .= "📅 Fecha: {$dateFormatted}\n";
             $reply .= "⏰ Hora: {$appointment->start_time}\n";
-            $reply .= "🦷 Motivo: {$appointment->reason}\n\n";
+            $reply .= "🦷 Motivo: {$appointment->treatment}\n\n";
             $reply .= '¡Te esperamos! 😊🦷';
         } else {
             $reply = "😔 *No se encontró la cita.*\n";
@@ -1394,7 +1441,7 @@ class WhatsappBotService
 
         $appointments = Appointment::where('patient_id', $patient->id)
             ->where('date', $tomorrow)
-            ->whereIn('status', ['scheduled', 'pending_confirmation'])
+            ->whereIn('status', ['pending', 'confirmed'])
             ->get();
 
         foreach ($appointments as $apt) {
@@ -1403,7 +1450,7 @@ class WhatsappBotService
             $msg .= "Te recordamos que tienes una cita *mañana*:\n\n";
             $msg .= '📅 Fecha: ' . Carbon::parse($apt->date)->format('d/m/Y') . "\n";
             $msg .= "⏰ Hora: {$apt->start_time}\n";
-            $msg .= "🦷 Motivo: {$apt->reason}\n\n";
+            $msg .= "🦷 Motivo: {$apt->treatment}\n\n";
             $msg .= "📍 *Dirección:* Av. Principal 456, Miraflores\n";
             $msg .= "📞 *Teléfono:* 999-888-777\n\n";
             $msg .= "Si necesitas reprogramar, responde con la opción *4*. 🔄\n";
@@ -1421,7 +1468,7 @@ class WhatsappBotService
         $appointments = Appointment::where('patient_id', $patient->id)
             ->where('date', $today)
             ->where('start_time', 'like', substr($twoHoursFromNow, 0, 2) . '%')
-            ->whereIn('status', ['scheduled', 'pending_confirmation'])
+            ->whereIn('status', ['pending', 'confirmed'])
             ->get();
 
         foreach ($appointments as $apt) {
@@ -1460,7 +1507,7 @@ class WhatsappBotService
     {
         // Verificar última limpieza dental
         $lastCleaning = Appointment::where('patient_id', $patient->id)
-            ->where('reason', 'like', '%limpieza%')
+            ->where('treatment', 'like', '%limpieza%')
             ->where('status', 'completed')
             ->orderBy('date', 'desc')
             ->first();
@@ -1652,7 +1699,7 @@ class WhatsappBotService
 
         $appointments = Appointment::with('patient')
             ->where('date', $tomorrow)
-            ->whereIn('status', ['scheduled', 'pending_confirmation'])
+            ->whereIn('status', ['pending', 'confirmed'])
             ->get();
 
         foreach ($appointments as $apt) {
@@ -1661,7 +1708,7 @@ class WhatsappBotService
             $msg .= "Te recordamos tu cita de mañana:\n";
             $msg .= '📅 ' . Carbon::parse($apt->date)->format('d/m/Y') . "\n";
             $msg .= "⏰ {$apt->start_time}\n";
-            $msg .= "🦷 {$apt->reason}\n\n";
+            $msg .= "🦷 {$apt->treatment}\n\n";
             $msg .= "📍 Av. Principal 456, Miraflores\n";
             $msg .= '¡Te esperamos! 😊🦷';
 
@@ -1681,14 +1728,14 @@ class WhatsappBotService
         $appointments = Appointment::with('patient')
             ->where('date', $today)
             ->where('start_time', 'like', substr($twoHoursFromNow, 0, 2) . '%')
-            ->whereIn('status', ['scheduled', 'pending_confirmation'])
+            ->whereIn('status', ['pending', 'confirmed'])
             ->get();
 
         foreach ($appointments as $apt) {
             $msg = "🔔 *TU CITA ES EN 2 HORAS* 🔔\n\n";
             $msg .= "¡Hola *{$apt->patient->first_name}*! 🦷\n\n";
             $msg .= "Tu cita es hoy a las *{$apt->start_time}*.\n";
-            $msg .= "🦷 {$apt->reason}\n\n";
+            $msg .= "🦷 {$apt->treatment}\n\n";
             $msg .= "📍 Av. Principal 456, Miraflores\n";
             $msg .= '¡Llega 10 minutos antes! 😁';
 
@@ -1705,7 +1752,7 @@ class WhatsappBotService
         $sixMonthsAgo = now()->subMonths(6)->format('Y-m-d');
 
         $patients = Patient::whereHas('appointments', function ($query) use ($sixMonthsAgo) {
-            $query->where('reason', 'like', '%limpieza%')
+            $query->where('treatment', 'like', '%limpieza%')
                 ->where('status', 'completed')
                 ->where('date', '<=', $sixMonthsAgo);
         })->get();

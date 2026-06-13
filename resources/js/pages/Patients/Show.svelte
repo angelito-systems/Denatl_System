@@ -23,6 +23,7 @@
         Eye,
     } from 'lucide-svelte';
     import AppHead from '@/components/AppHead.svelte';
+    import PatientFormModal from '@/components/PatientFormModal.svelte';
     import OdontogramaPro from '@/components/odontograma/OdontogramaPro.svelte';
     import OdontogramaHistoryModal from '@/components/odontograma/OdontogramaHistoryModal.svelte';
     import ContratosDocumentos from './ContratosDocumentos.svelte';
@@ -55,6 +56,7 @@
 
     let isSaving = $state(false);
     let activeTab = $state('general');
+    let isModalOpen = $state(false);
 
     let daysUntilBirthday = $state<number | null>(null);
     let isBirthdayToday = $state(false);
@@ -186,9 +188,9 @@
             <div>
                 <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2">
                     {patient.first_name} {patient.last_name}
-                    <Link href={`/patients/${patient.id}/edit`} class="text-muted-foreground hover:text-blue-600 transition-colors">
+                    <button onclick={() => isModalOpen = true} class="text-muted-foreground hover:text-blue-600 transition-colors">
                         <Edit class="h-5 w-5" />
-                    </Link>
+                    </button>
                 </h1>
                 <div class="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
                     <span class="flex items-center gap-1">
@@ -519,3 +521,5 @@
     patientId={patient.id} 
     odontogramData={selectedHistoryData} 
 />
+
+<PatientFormModal bind:isOpen={isModalOpen} patient={patient} />

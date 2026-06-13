@@ -1,90 +1,7 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Reporte Clínico – {{ $clinica['nombre'] }}</title>
-    <style>
-        /* ══ PDF DESIGN SYSTEM v2 ══ */
-        @page { margin: 20mm 16mm 24mm 16mm; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #1e293b; background: #fff; line-height: 1.65; }
+@extends('pdfs.layouts.master')
+@section('title', 'Reporte Clínico – {{ $clinica['nombre'] }}')
 
-        .header { display: table; width: 100%; padding-bottom: 14px; margin-bottom: 22px; border-bottom: 2.5px solid #0f2040; }
-        .header-logo { display: table-cell; width: 72px; vertical-align: middle; }
-        .header-logo img { max-width: 64px; max-height: 64px; border-radius: 6px; }
-        .header-logo-placeholder { width: 58px; height: 58px; background: #0f2040; border-radius: 8px; font-size: 20px; font-weight: bold; color: #fff; text-align: center; line-height: 58px; letter-spacing: -1px; }
-        .header-info { display: table-cell; vertical-align: middle; padding-left: 12px; }
-        .header-clinica { font-size: 17px; font-weight: bold; color: #0f2040; text-transform: uppercase; letter-spacing: 0.8px; }
-        .header-meta { font-size: 9.5px; color: #64748b; margin-top: 3px; }
-        .header-meta span { margin-right: 14px; }
-        .header-doc { display: table-cell; vertical-align: middle; text-align: right; width: 175px; }
-        .doc-type-label { font-size: 9px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-        .doc-badge { display: inline-block; background: #0f2040; color: #fff; padding: 5px 14px; border-radius: 4px; font-size: 10.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-        .doc-sub { font-size: 9.5px; color: #94a3b8; margin-top: 5px; }
-
-        /* PERIODO INFO */
-        .periodo-bar { background: #f1f5f9; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; padding: 8px 14px; margin-bottom: 20px; display: table; width: 100%; border-radius: 3px; }
-        .periodo-cell { display: table-cell; vertical-align: middle; }
-        .periodo-cell + .periodo-cell { border-left: 1px solid #e2e8f0; padding-left: 16px; }
-        .periodo-label { font-size: 9px; color: #64748b; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; }
-        .periodo-value { font-size: 11.5px; font-weight: bold; color: #0f2040; margin-top: 1px; }
-
-        /* KPI ROW */
-        .kpi-row { display: table; width: 100%; margin-bottom: 24px; }
-        .kpi-cell { display: table-cell; width: 33.33%; padding: 0 5px; }
-        .kpi-cell:first-child { padding-left: 0; }
-        .kpi-cell:last-child  { padding-right: 0; }
-        .kpi-card { border: 1px solid #e2e8f0; border-top: 3px solid #2563eb; border-radius: 4px; padding: 13px 14px; background: #fafbff; text-align: center; }
-        .kpi-card.green { border-top-color: #059669; }
-        .kpi-card.red   { border-top-color: #dc2626; }
-        .kpi-label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; font-weight: bold; }
-        .kpi-value { font-size: 20px; font-weight: bold; color: #0f2040; margin: 5px 0 1px; }
-        .kpi-value.green { color: #059669; }
-        .kpi-value.red   { color: #dc2626; }
-        .kpi-sub { font-size: 9px; color: #94a3b8; }
-
-        /* SECTION */
-        .section-header { display: table; width: 100%; margin: 18px 0 10px; }
-        .section-num { display: table-cell; width: 28px; vertical-align: middle; font-size: 9px; font-weight: bold; color: #2563eb; text-align: right; }
-        .section-bar { display: table-cell; vertical-align: middle; }
-        .section-bar-inner { background: #0f2040; color: #fff; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; padding: 5px 10px 5px 8px; display: inline-block; }
-        .section-line { display: table-cell; border-bottom: 1.5px solid #e2e8f0; vertical-align: bottom; }
-
-        /* TABLES */
-        .data-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 11px; }
-        .data-table thead tr { background: #0f2040; color: #fff; }
-        .data-table thead th { padding: 8px 10px; font-size: 9.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; border: none; text-align: left; }
-        .data-table thead th.right { text-align: right; }
-        .data-table tbody tr:nth-child(even) td { background: #f8faff; }
-        .data-table tbody tr:nth-child(odd)  td { background: #fff; }
-        .data-table tbody td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
-        .data-table tbody td.right { text-align: right; font-variant-numeric: tabular-nums; font-weight: bold; }
-        .empty-row td { text-align: center; color: #94a3b8; padding: 24px; font-style: italic; }
-
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 9.5px; font-weight: bold; text-transform: uppercase; }
-        .badge-green  { background: #dcfce7; color: #166534; }
-        .badge-red    { background: #fee2e2; color: #991b1b; }
-        .badge-blue   { background: #dbeafe; color: #1e40af; }
-
-        .legal-note { margin-top: 24px; padding: 9px 12px; background: #f8faff; border: 1px solid #e2e8f0; border-radius: 3px; font-size: 9px; color: #94a3b8; text-align: center; line-height: 1.6; }
-
-        .footer { position: fixed; bottom: -17px; left: 0; right: 0; border-top: 1.5px solid #e2e8f0; display: table; width: 100%; padding-top: 6px; background: #fff; }
-        .footer-left   { display: table-cell; font-size: 8.5px; color: #94a3b8; vertical-align: middle; }
-        .footer-center { display: table-cell; font-size: 8.5px; color: #94a3b8; vertical-align: middle; text-align: center; }
-        .footer-right  { display: table-cell; font-size: 8.5px; color: #94a3b8; text-align: right; vertical-align: middle; }
-
-        .text-right { text-align: right !important; }
-    </style>
-</head>
-<body>
-
-<div class="footer">
-    <div class="footer-left">Generado el {{ $fechaEmision }} · {{ $clinica['nombre'] }}</div>
-    <div class="footer-center">RUC: {{ $clinica['ruc'] }} · Tel: {{ $clinica['telefono'] }}</div>
-    <div class="footer-right">Este documento tiene validez informativa y contractual según los términos de la clínica</div>
-</div>
-
-{{-- HEADER --}}
+@section('content')
 <div class="header">
     <div class="header-logo">
         @if(!empty($clinica['logo']))
@@ -217,6 +134,4 @@
 <div class="legal-note">
     Este documento tiene validez informativa y contractual según los términos de la clínica. Generado automáticamente por el sistema LifeMedSys · {{ $fechaEmision }}
 </div>
-
-</body>
-</html>
+@endsection

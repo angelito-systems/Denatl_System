@@ -31,7 +31,7 @@
         return () => clearInterval(interval);
     });
 
-    const user = $derived(page.props.auth.user);
+    const user = $derived(page.props.auth?.user);
     const userName = $derived(user?.nombres || user?.name || 'Admin');
     const userInitials = $derived(userName.substring(0, 2).toUpperCase());
 

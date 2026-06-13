@@ -152,8 +152,8 @@
     ];
     import { page } from '@inertiajs/svelte';
 
-    const userRoles = $derived(page.props.auth.user?.roles || []);
-    const userPermissions = $derived(page.props.auth.user?.permissions || []);
+    const userRoles = $derived(page.props.auth?.user?.roles || []);
+    const userPermissions = $derived(page.props.auth?.user?.permissions || []);
 
     function hasAccess(item: NavItem): boolean {
         // Si el usuario es Administrador, tiene acceso a todo

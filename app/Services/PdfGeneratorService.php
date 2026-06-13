@@ -58,7 +58,7 @@ class PdfGeneratorService
 
         return $this->applyBrowsershotConfig($pdf)
             ->format('a4')
-            ->margins(15, 15, 15, 15)
+            ->margins(25, 25, 25, 30)
             ->name("historia_{$paciente->first_name}_{$paciente->last_name}.pdf");
     }
 
@@ -78,7 +78,7 @@ class PdfGeneratorService
         return $this->applyBrowsershotConfig($pdf)
             ->format('a4')
             ->landscape() // Landscape works better for wide grids like Odontograms
-            ->margins(10, 10, 10, 10)
+            ->margins(25, 25, 25, 30)
             ->name("odontograma_{$paciente->first_name}_{$paciente->last_name}.pdf");
     }
 
@@ -112,7 +112,7 @@ class PdfGeneratorService
 
         return $this->applyBrowsershotConfig($pdf)
             ->format('a4')
-            ->margins(15, 15, 15, 15)
+            ->margins(25, 25, 25, 30)
             ->name("{$tipoPlantilla}_{$paciente->first_name}_{$paciente->last_name}.pdf");
     }
 
@@ -147,7 +147,7 @@ class PdfGeneratorService
             // A4 estándar para facturas y notas de crédito
             $pdf = $this->applyBrowsershotConfig($pdf)
                 ->format('a4')
-                ->margins(10, 10, 10, 10);
+                ->margins(25, 25, 25, 30);
         }
 
         return $pdf->name("comprobante_{$pago->id}.pdf");
