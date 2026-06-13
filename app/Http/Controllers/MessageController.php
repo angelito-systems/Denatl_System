@@ -109,4 +109,12 @@ class MessageController extends Controller
 
         return redirect()->back()->with('error', 'Error al enviar el documento por WhatsApp.');
     }
+
+    public function clear(Conversation $conversation)
+    {
+        $conversation->messages()->delete();
+        $conversation->update(['last_message_at' => now()]);
+
+        return redirect()->back()->with('success', 'Historial del chat vaciado permanentemente.');
+    }
 }

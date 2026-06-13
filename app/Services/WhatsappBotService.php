@@ -78,6 +78,19 @@ class WhatsappBotService
             return;
         }
 
+        // Interceptar saludos para enviar el menú principal en lugar de error
+        $greetings = ['hola', 'buenas', 'buenos dias', 'buenos días', 'buenas tardes', 'buenas noches', 'saludos', 'hi', 'hello'];
+        if (in_array($messageText, $greetings)) {
+            if ($conversation->patient_id) {
+                $this->sendTypingIndicator($conversation->phone_number);
+                $this->setMenuState($conversation, true);
+            } else {
+                $this->setWelcomeState($conversation);
+            }
+
+            return;
+        }
+
         // Procesar según el estado actual
         switch ($state) {
             case self::STATE_WELCOME:

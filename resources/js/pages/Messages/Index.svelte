@@ -60,21 +60,7 @@
         form.phone = conv.phone_number;
         currentMessages = conv.messages || [];
 
-        // ENVIAR MENSAJE AUTOMATICO AL ABRIR CHAT ASIGNADO
-        if (conv.bot_status === 'human_assigned' && !conv.assigned_message_sent) {
-            const userName = page.props.auth?.user?.name || 'especializado';
-            const autoMessage = `Te hemos asignado al asesor ${userName}. Actualmente se encuentra conectado y atenderá tu consulta en breve. Por favor espera unos momentos mientras revisa tu caso.`;
-            
-            router.post('/mensajes/send', {
-                phone: conv.phone_number,
-                message: autoMessage
-            }, { 
-                preserveScroll: true,
-                onSuccess: () => {
-                    conv.assigned_message_sent = true;
-                }
-            });
-        }
+        // El mensaje automático se envía exclusivamente en toggleBot() cuando cambia a human_assigned
 
         // Auto-scroll al fondo al cargar
         setTimeout(() => {
@@ -145,8 +131,9 @@
                         selectedConversation.bot_status = newStatus;
                         conversations = [...conversations]; // trigger reactivity
 
+                        const userName = page.props.auth?.user?.name || 'especializado';
                         const autoMessage = newStatus === 'human_assigned' 
-                            ? 'Te hemos asignado un asesor especializado. Actualmente se encuentra conectado y atenderá tu consulta en breve. Por favor espera unos momentos mientras revisa tu caso.' 
+                            ? `Te hemos asignado al asesor ${userName}. Actualmente se encuentra conectado y atenderá tu consulta en breve. Por favor espera unos momentos mientras revisa tu caso.` 
                             : 'Hola nuevamente. Estoy de vuelta para ayudarte con cualquier consulta o gestión que necesites. 😊';
 
                         router.post('/mensajes/send', {
