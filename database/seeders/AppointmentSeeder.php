@@ -2,9 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
 use App\Models\Appointment;
+use App\Models\Patient;
+use App\Models\User;
+use Illuminate\Database\Seeder;
 
 class AppointmentSeeder extends Seeder
 {
@@ -13,8 +14,8 @@ class AppointmentSeeder extends Seeder
      */
     public function run(): void
     {
-        $patients = \App\Models\Patient::all();
-        $dentists = \App\Models\User::role(['Dentista', 'Administrador'])->get();
+        $patients = Patient::all();
+        $dentists = User::role(['Dentista', 'Administrador'])->get();
 
         if ($patients->count() === 0 || $dentists->count() === 0) {
             return;

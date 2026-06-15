@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Raffle;
-use App\Models\RafflePrize;
 use App\Jobs\NotifyRaffleWinners;
+use App\Models\Raffle;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -15,9 +14,9 @@ class RaffleController extends Controller
         $raffles = Raffle::withCount('participants')
             ->orderBy('created_at', 'desc')
             ->get();
-            
+
         return Inertia::render('Raffles/Index', [
-            'raffles' => $raffles
+            'raffles' => $raffles,
         ]);
     }
 
@@ -38,7 +37,7 @@ class RaffleController extends Controller
 
         $raffle = Raffle::create($validated);
 
-        if (!empty($validated['prizes'])) {
+        if (! empty($validated['prizes'])) {
             foreach ($validated['prizes'] as $prizeData) {
                 $raffle->prizes()->create($prizeData);
             }
@@ -50,9 +49,9 @@ class RaffleController extends Controller
     public function show(Raffle $raffle)
     {
         $raffle->load(['prizes', 'participants.patient', 'winners.patient', 'winners.prize']);
-        
+
         return Inertia::render('Raffles/Show', [
-            'raffle' => $raffle
+            'raffle' => $raffle,
         ]);
     }
 
@@ -88,6 +87,7 @@ class RaffleController extends Controller
     public function destroy(Raffle $raffle)
     {
         $raffle->delete();
+
         return redirect()->route('raffles.index')->with('success', 'Sorteo eliminado');
     }
 
@@ -98,7 +98,7 @@ class RaffleController extends Controller
         }
 
         $participants = $raffle->participants()->orderBy('created_at', 'asc')->get();
-        
+
         if ($participants->isEmpty()) {
             return redirect()->back()->with('error', 'No hay participantes para el sorteo');
         }

@@ -17,7 +17,7 @@ class Cashbox extends Model
         'closed_at',
         'opened_by_id',
         'closed_by_id',
-        'notes'
+        'notes',
     ];
 
     protected $casts = [

@@ -11,8 +11,9 @@ class PromotionController extends Controller
     public function index()
     {
         $promotions = Promotion::orderBy('created_at', 'desc')->get();
+
         return Inertia::render('Promotions/Index', [
-            'promotions' => $promotions
+            'promotions' => $promotions,
         ]);
     }
 
@@ -25,7 +26,7 @@ class PromotionController extends Controller
             'discount_value' => 'nullable|numeric|min:0',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
         ]);
 
         Promotion::create($validated);
@@ -36,7 +37,7 @@ class PromotionController extends Controller
     public function update(Request $request, string $id)
     {
         $promotion = Promotion::findOrFail($id);
-        
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -44,7 +45,7 @@ class PromotionController extends Controller
             'discount_value' => 'nullable|numeric|min:0',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
         ]);
 
         $promotion->update($validated);

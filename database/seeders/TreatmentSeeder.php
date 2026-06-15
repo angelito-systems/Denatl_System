@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Treatment;
 use Illuminate\Database\Seeder;
 
 class TreatmentSeeder extends Seeder
@@ -24,7 +24,7 @@ class TreatmentSeeder extends Seeder
         ];
 
         foreach ($treatments as $treatment) {
-            \App\Models\Treatment::create($treatment);
+            Treatment::create($treatment);
         }
     }
 }

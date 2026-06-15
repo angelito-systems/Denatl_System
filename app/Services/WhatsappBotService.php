@@ -4,10 +4,16 @@ namespace App\Services;
 
 use App\Http\Controllers\ReniecController;
 use App\Models\Appointment;
+use App\Models\Configuration;
 use App\Models\Conversation;
+use App\Models\DoctorSchedule;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Models\Promotion;
+use App\Models\Raffle;
+use App\Models\RaffleParticipant;
 use App\Models\Rating;
+use App\Models\TreatmentContract;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -238,7 +244,7 @@ class WhatsappBotService
             if (isset($data['success']) && $data['success']) {
                 $nombreCompleto = $data['data']['nombre_completo'] ?? '';
                 $nombres = $data['data']['nombres'] ?? '';
-                $apellidos = trim(($data['data']['apellido_paterno'] ?? '') . ' ' . ($data['data']['apellido_materno'] ?? ''));
+                $apellidos = trim(($data['data']['apellido_paterno'] ?? '').' '.($data['data']['apellido_materno'] ?? ''));
 
                 $reply = "✅ *¡Perfecto! Encontré tus datos:*\n\n";
                 $reply .= "👤 *Nombre:* {$nombreCompleto}\n\n";
@@ -267,7 +273,7 @@ class WhatsappBotService
                 $this->sendMessage($conversation->phone_number, $reply);
             }
         } catch (\Exception $e) {
-            Log::error('Error en bot RENIEC: ' . $e->getMessage());
+            Log::error('Error en bot RENIEC: '.$e->getMessage());
             $reply = "⚠️ *Tuvimos un problema técnico al verificar tu DNI.*\n\n";
             $reply .= "No te preocupes, puedes intentarlo nuevamente en unos minutos o escribir *'hablar con asesor'* para que te ayudemos personalmente. 👩‍💼";
 
@@ -381,9 +387,10 @@ class WhatsappBotService
     protected function handleMainMenu(Conversation $conversation, string $messageText)
     {
         $messageText = trim($messageText);
-        
+
         if (preg_match('/^ticket\s+(\d+)$/i', $messageText, $matches)) {
             $this->sendPaymentPdf($conversation, $matches[1]);
+
             return;
         }
 
@@ -615,7 +622,7 @@ class WhatsappBotService
 
             // Validar Horario
             $dayOfWeek = Carbon::parse($appointmentDate)->dayOfWeekIso;
-            $schedule = \App\Models\DoctorSchedule::where('user_id', $defaultDentistId)
+            $schedule = DoctorSchedule::where('user_id', $defaultDentistId)
                 ->where('day_of_week', $dayOfWeek)
                 ->where('is_working', true)
                 ->first();
@@ -628,9 +635,10 @@ class WhatsappBotService
                 if ($requestedCarbonTime->lt($start) || $requestedCarbonTime->gt($end)) {
                     $reply = "⏰ *Esa hora está fuera de nuestro horario de atención.*\n\n";
                     $reply .= "El doctor atiende de {$schedule->start_time} a {$schedule->end_time}.\n";
-                    $reply .= "Por favor, escribe otra hora. ⏰";
+                    $reply .= 'Por favor, escribe otra hora. ⏰';
                     $conversation->update(['bot_state' => self::STATE_ASK_APPOINTMENT_TIME]);
                     $this->sendMessage($conversation->phone_number, $reply);
+
                     return;
                 }
 
@@ -641,9 +649,10 @@ class WhatsappBotService
                     if ($requestedCarbonTime->between($breakStart, $breakEnd)) {
                         $reply = "🍽️ *A esa hora el doctor se encuentra en horario de refrigerio.*\n\n";
                         $reply .= "El refrigerio es de {$schedule->break_start} a {$schedule->break_end}.\n";
-                        $reply .= "Por favor, escoge otra hora. ⏰";
+                        $reply .= 'Por favor, escoge otra hora. ⏰';
                         $conversation->update(['bot_state' => self::STATE_ASK_APPOINTMENT_TIME]);
                         $this->sendMessage($conversation->phone_number, $reply);
+
                         return;
                     }
                 }
@@ -683,7 +692,7 @@ class WhatsappBotService
             sleep(2);
             $this->setMenuState($conversation);
         } catch (\Exception $e) {
-            Log::error('Error al crear cita: ' . $e->getMessage());
+            Log::error('Error al crear cita: '.$e->getMessage());
 
             $reply = "😔 *Tuvimos un problema al agendar tu cita.*\n\n";
             $reply .= 'Por favor, intenta de nuevo más tarde o solicita hablar con un asesor (opción 9). 👩‍💼';
@@ -727,7 +736,7 @@ class WhatsappBotService
 
                 $status = $statusEmoji[$apt->status] ?? $apt->status;
 
-                $msg .= '*Cita #' . ($index + 1) . "*\n";
+                $msg .= '*Cita #'.($index + 1)."*\n";
                 $msg .= "📅 {$dateFormatted} ({$dayName})\n";
                 $msg .= "⏰ {$apt->start_time}\n";
                 $msg .= "🦷 {$apt->treatment}\n";
@@ -760,8 +769,8 @@ class WhatsappBotService
             ->get();
 
         // Contratos de Tratamiento
-        $contracts = \App\Models\TreatmentContract::where('patient_id', $conversation->patient_id)->get()
-            ->filter(function($contract) {
+        $contracts = TreatmentContract::where('patient_id', $conversation->patient_id)->get()
+            ->filter(function ($contract) {
                 return $contract->balance_due > 0;
             });
 
@@ -779,8 +788,8 @@ class WhatsappBotService
             $msg .= "Tienes *{$count}* deuda(s) pendiente(s):\n\n";
 
             foreach ($payments as $payment) {
-                $description = $payment->notes ? "Pago: " . substr($payment->notes, 0, 30) : "Consulta/Tratamiento";
-                $dateStr = $payment->created_at ? \Carbon\Carbon::parse($payment->created_at)->format('d/m/Y') : date('d/m/Y');
+                $description = $payment->notes ? 'Pago: '.substr($payment->notes, 0, 30) : 'Consulta/Tratamiento';
+                $dateStr = $payment->created_at ? Carbon::parse($payment->created_at)->format('d/m/Y') : date('d/m/Y');
                 $msg .= "📋 {$description}\n";
                 $msg .= "💵 Monto: S/ {$payment->amount}\n";
                 $msg .= "📅 Generado: {$dateStr}\n";
@@ -788,15 +797,15 @@ class WhatsappBotService
             }
 
             foreach ($contracts as $contract) {
-                $dateStr = $contract->start_date ? \Carbon\Carbon::parse($contract->start_date)->format('d/m/Y') : date('d/m/Y');
+                $dateStr = $contract->start_date ? Carbon::parse($contract->start_date)->format('d/m/Y') : date('d/m/Y');
                 $msg .= "📄 Contrato: {$contract->treatment_name}\n";
                 $msg .= "💵 Pendiente: S/ {$contract->balance_due} (de S/ {$contract->total_cost})\n";
                 $msg .= "📅 Iniciado: {$dateStr}\n";
                 $msg .= "─────────────────\n";
             }
 
-            $yapePlin = \App\Models\Configuration::get('pago_yape_plin', 'No configurado');
-            $transferencia = \App\Models\Configuration::get('pago_transferencia', 'No configurado');
+            $yapePlin = Configuration::get('pago_yape_plin', 'No configurado');
+            $transferencia = Configuration::get('pago_transferencia', 'No configurado');
 
             $msg .= "\n💰 *TOTAL PENDIENTE: S/ {$total}*\n\n";
             $msg .= "💳 *Métodos de pago:*\n";
@@ -826,16 +835,16 @@ class WhatsappBotService
 
         if ($payments->isEmpty()) {
             $reply = "🧾 *Historial de Pagos* 🧾\n\n";
-            $reply .= "Actualmente no tienes pagos registrados con nosotros. 🤷‍♂️";
+            $reply .= 'Actualmente no tienes pagos registrados con nosotros. 🤷‍♂️';
             $this->sendMessage($conversation->phone_number, $reply);
         } else {
             $msg = "🧾 *TUS ÚLTIMOS PAGOS (TICKETS)* 🧾\n\n";
             $msg .= "Aquí tienes el detalle de tus últimos 5 abonos:\n\n";
 
             foreach ($payments as $payment) {
-                $dateStr = $payment->created_at ? \Carbon\Carbon::parse($payment->created_at)->format('d/m/Y h:i A') : date('d/m/Y');
+                $dateStr = $payment->created_at ? Carbon::parse($payment->created_at)->format('d/m/Y h:i A') : date('d/m/Y');
                 $methodStr = ucfirst($payment->payment_method ?? 'Efectivo');
-                $descStr = $payment->notes ? substr($payment->notes, 0, 40) : "Abono / Tratamiento";
+                $descStr = $payment->notes ? substr($payment->notes, 0, 40) : 'Abono / Tratamiento';
 
                 $msg .= "📄 *Ticket #PD-{$payment->id}*\n";
                 $msg .= "📅 Fecha: {$dateStr}\n";
@@ -844,7 +853,7 @@ class WhatsappBotService
                 $msg .= "📋 Detalle: {$descStr}\n";
                 $msg .= "─────────────────\n";
             }
-            
+
             $msg .= "\n💡 _Este mensaje sirve como constancia (Ticket Virtual) de tus pagos._\n";
             $msg .= "📥 *Si necesitas el documento en PDF, responde con la palabra TICKET seguida del número (Ej: TICKET {$payments->first()->id}).*";
             $this->sendMessage($conversation->phone_number, $msg);
@@ -856,39 +865,40 @@ class WhatsappBotService
 
     protected function sendPaymentPdf(Conversation $conversation, $paymentId)
     {
-        $payment = \App\Models\Payment::where('patient_id', $conversation->patient_id)
+        $payment = Payment::where('patient_id', $conversation->patient_id)
             ->where('id', $paymentId)
             ->first();
 
-        if (!$payment) {
-            $this->sendMessage($conversation->phone_number, "❌ No encontré un ticket de pago válido con ese número para tu cuenta.");
+        if (! $payment) {
+            $this->sendMessage($conversation->phone_number, '❌ No encontré un ticket de pago válido con ese número para tu cuenta.');
+
             return;
         }
 
-        $this->sendMessage($conversation->phone_number, "⏳ Generando tu comprobante en PDF, un momento por favor...");
-        
+        $this->sendMessage($conversation->phone_number, '⏳ Generando tu comprobante en PDF, un momento por favor...');
+
         try {
-            $pdfService = app(\App\Services\PdfGeneratorService::class);
+            $pdfService = app(PdfGeneratorService::class);
             $pdf = $pdfService->generarComprobante($payment);
             $base64 = $pdf->base64();
             $fileName = "comprobante_pago_{$payment->id}.pdf";
-            
-            $whatsappService = app(\App\Services\WhatsAppService::class);
+
+            $whatsappService = app(WhatsAppService::class);
             $success = $whatsappService->enviarDocumento(
-                $conversation->phone_number, 
-                $base64, 
-                $fileName, 
+                $conversation->phone_number,
+                $base64,
+                $fileName,
                 "🧾 Aquí tienes tu comprobante de pago #PD-{$payment->id}."
             );
 
-            if (!$success) {
-                $this->sendMessage($conversation->phone_number, "❌ Hubo un error al enviar el archivo PDF. Intenta más tarde.");
+            if (! $success) {
+                $this->sendMessage($conversation->phone_number, '❌ Hubo un error al enviar el archivo PDF. Intenta más tarde.');
             }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error enviando PDF por Bot: " . $e->getMessage());
-            $this->sendMessage($conversation->phone_number, "❌ Ocurrió un error al generar tu comprobante.");
+            Log::error('Error enviando PDF por Bot: '.$e->getMessage());
+            $this->sendMessage($conversation->phone_number, '❌ Ocurrió un error al generar tu comprobante.');
         }
-        
+
         sleep(2);
         $this->setMenuState($conversation);
     }
@@ -1019,7 +1029,7 @@ class WhatsappBotService
 
         $reply = "✅✨ *¡Cita reprogramada exitosamente!*\n\n";
         $reply .= "📅 Nueva fecha: {$botData['reschedule_date']}\n";
-        $reply .= '⏰ Nueva hora: ' . strtoupper($messageText) . "\n\n";
+        $reply .= '⏰ Nueva hora: '.strtoupper($messageText)."\n\n";
         $reply .= 'Te enviaremos un recordatorio antes de tu cita. ⏰';
 
         $this->sendMessage($conversation->phone_number, $reply);
@@ -1121,7 +1131,7 @@ class WhatsappBotService
      */
     protected function showPromotions(Conversation $conversation)
     {
-        $promotions = \App\Models\Promotion::where('is_active', true)
+        $promotions = Promotion::where('is_active', true)
             ->where(function ($query) {
                 $query->whereNull('end_date')
                     ->orWhere('end_date', '>=', now()->format('Y-m-d'));
@@ -1141,8 +1151,8 @@ class WhatsappBotService
                 }
                 if ($promo->discount_value) {
                     $discount = $promo->discount_type === 'percentage'
-                        ? (int)$promo->discount_value . "% desc."
-                        : "S/ " . $promo->discount_value . " de desc.";
+                        ? (int) $promo->discount_value.'% desc.'
+                        : 'S/ '.$promo->discount_value.' de desc.';
                     $msg .= "• {$discount}\n";
                 }
                 $msg .= "\n";
@@ -1163,7 +1173,7 @@ class WhatsappBotService
      */
     protected function showRaffles(Conversation $conversation)
     {
-        $raffles = \App\Models\Raffle::where('status', 'active')
+        $raffles = Raffle::where('status', 'active')
             ->where(function ($query) {
                 $query->whereNull('draw_date')
                     ->orWhere('draw_date', '>=', now()->format('Y-m-d'));
@@ -1172,10 +1182,11 @@ class WhatsappBotService
 
         if ($raffles->isEmpty()) {
             $msg = "🎁 *SORTEOS VIGENTES*\n\n";
-            $msg .= "Actualmente no tenemos sorteos activos. ¡Mantente atento a nuestras redes para futuras novedades! 🥳";
+            $msg .= 'Actualmente no tenemos sorteos activos. ¡Mantente atento a nuestras redes para futuras novedades! 🥳';
             $this->sendMessage($conversation->phone_number, $msg);
             sleep(2);
             $this->setMenuState($conversation);
+
             return;
         }
 
@@ -1183,7 +1194,7 @@ class WhatsappBotService
         $msg .= "¡Participa y gana increíbles premios!\n\n";
 
         foreach ($raffles as $index => $raffle) {
-            $msg .= "*" . ($index + 1) . ".* {$raffle->name}\n";
+            $msg .= '*'.($index + 1).".* {$raffle->name}\n";
             if ($raffle->description) {
                 $msg .= "   _{$raffle->description}_\n";
             }
@@ -1201,40 +1212,41 @@ class WhatsappBotService
         $normalizedText = strtolower(trim($messageText));
 
         if (in_array($normalizedText, ['salir', 'cancelar', 'volver'])) {
-            $this->sendMessage($conversation->phone_number, "Volviendo al menú principal... 🔙");
+            $this->sendMessage($conversation->phone_number, 'Volviendo al menú principal... 🔙');
             sleep(1);
             $this->setMenuState($conversation);
+
             return;
         }
 
-        $raffles = \App\Models\Raffle::where('status', 'active')
+        $raffles = Raffle::where('status', 'active')
             ->where(function ($query) {
                 $query->whereNull('draw_date')
                     ->orWhere('draw_date', '>=', now()->format('Y-m-d'));
             })
             ->get();
 
-        $index = (int)$messageText - 1;
+        $index = (int) $messageText - 1;
 
         if ($index >= 0 && $index < $raffles->count()) {
             $raffle = $raffles[$index];
 
             // Verificar si ya está participando
-            $exists = \App\Models\RaffleParticipant::where('raffle_id', $raffle->id)
+            $exists = RaffleParticipant::where('raffle_id', $raffle->id)
                 ->where('phone_number', $conversation->phone_number)
                 ->exists();
 
             if ($exists) {
                 $reply = "😅 ¡Ya estás participando en el sorteo *{$raffle->name}*!\n\nTe deseamos mucha suerte. 🍀";
             } else {
-                \App\Models\RaffleParticipant::create([
+                RaffleParticipant::create([
                     'raffle_id' => $raffle->id,
                     'patient_id' => $conversation->patient_id,
                     'phone_number' => $conversation->phone_number,
                 ]);
                 $reply = "🎉 *¡Inscripción Exitosa!* 🎉\n\n";
                 $reply .= "Estás participando en el sorteo: *{$raffle->name}*.\n";
-                $reply .= "Te avisaremos por este medio si resultas ganador. ¡Mucha suerte! 🍀";
+                $reply .= 'Te avisaremos por este medio si resultas ganador. ¡Mucha suerte! 🍀';
             }
 
             $this->sendMessage($conversation->phone_number, $reply);
@@ -1324,7 +1336,7 @@ class WhatsappBotService
                 'source' => 'whatsapp_bot',
             ]);
         } catch (\Exception $e) {
-            Log::error('Error al guardar rating: ' . $e->getMessage());
+            Log::error('Error al guardar rating: '.$e->getMessage());
         }
 
         $botData = $conversation->bot_data ?? [];
@@ -1339,7 +1351,7 @@ class WhatsappBotService
             5 => '🌟 ¡Excelente! ¡Nos hace muy felices que tu experiencia haya sido de 5 estrellas!',
         ];
 
-        $reply = $ratingMessages[$ratingScore] . "\n\n";
+        $reply = $ratingMessages[$ratingScore]."\n\n";
 
         if ($ratingScore <= 3) {
             $reply .= "¿Nos ayudarías respondiendo brevemente: *¿Qué debemos mejorar? o ¿Cuál fue el motivo de tu calificación?* ✍️\n";
@@ -1348,7 +1360,7 @@ class WhatsappBotService
             $reply .= "¿Te gustaría dejarnos un comentario adicional o retroalimentación? ✍️\n";
             $reply .= "_Escribe tu comentario o *'salir'* para volver al menú._";
         }
-        
+
         $conversation->update([
             'bot_state' => self::STATE_ASK_RATING_COMMENT,
             'bot_data' => $botData,
@@ -1361,10 +1373,10 @@ class WhatsappBotService
     {
         $botData = $conversation->bot_data;
         $ratingId = $botData['rating_id'] ?? null;
-        
+
         $normalizedText = strtolower(trim($messageText));
-        
-        if (!in_array($normalizedText, ['salir', 'cancelar'])) {
+
+        if (! in_array($normalizedText, ['salir', 'cancelar'])) {
             // Actualizar la valoración con el comentario si existe
             if ($ratingId) {
                 try {
@@ -1373,7 +1385,7 @@ class WhatsappBotService
                         $rating->update(['comment' => trim($messageText)]);
                     }
                 } catch (\Exception $e) {
-                    Log::error('Error al actualizar comentario de rating: ' . $e->getMessage());
+                    Log::error('Error al actualizar comentario de rating: '.$e->getMessage());
                 }
             }
         }
@@ -1461,7 +1473,7 @@ class WhatsappBotService
             $msg = "⏰ *RECORDATORIO DE CITA* ⏰\n\n";
             $msg .= "¡Hola *{$patient->first_name}*! 👋\n\n";
             $msg .= "Te recordamos que tienes una cita *mañana*:\n\n";
-            $msg .= '📅 Fecha: ' . Carbon::parse($apt->date)->format('d/m/Y') . "\n";
+            $msg .= '📅 Fecha: '.Carbon::parse($apt->date)->format('d/m/Y')."\n";
             $msg .= "⏰ Hora: {$apt->start_time}\n";
             $msg .= "🦷 Motivo: {$apt->treatment}\n\n";
             $msg .= "📍 *Dirección:* Av. Principal 456, Miraflores\n";
@@ -1480,7 +1492,7 @@ class WhatsappBotService
 
         $appointments = Appointment::where('patient_id', $patient->id)
             ->where('date', $today)
-            ->where('start_time', 'like', substr($twoHoursFromNow, 0, 2) . '%')
+            ->where('start_time', 'like', substr($twoHoursFromNow, 0, 2).'%')
             ->whereIn('status', ['pending', 'confirmed'])
             ->get();
 
@@ -1551,14 +1563,14 @@ class WhatsappBotService
         if ($pendingPayments->isNotEmpty()) {
             $total = $pendingPayments->sum('amount');
 
-            $yapePlin = \App\Models\Configuration::get('pago_yape_plin', 'No configurado');
-            $transferencia = \App\Models\Configuration::get('pago_transferencia', 'No configurado');
+            $yapePlin = Configuration::get('pago_yape_plin', 'No configurado');
+            $transferencia = Configuration::get('pago_transferencia', 'No configurado');
 
             $msg = "💳 *RECORDATORIO DE PAGO* 💳\n\n";
             $msg .= "Hola *{$patient->first_name}*, tienes pagos pendientes por *S/ {$total}*.\n\n";
             $msg .= "📋 *Pagos:*\n";
             foreach ($pendingPayments as $payment) {
-                $msg .= "• {$payment->description} - S/ {$payment->amount} (Vence: " . Carbon::parse($payment->due_date)->format('d/m/Y') . ")\n";
+                $msg .= "• {$payment->description} - S/ {$payment->amount} (Vence: ".Carbon::parse($payment->due_date)->format('d/m/Y').")\n";
             }
             $msg .= "\n💡 *Métodos de pago:*\n";
             if ($yapePlin !== 'No configurado') {
@@ -1661,7 +1673,7 @@ class WhatsappBotService
                 $sent++;
                 sleep(1); // Evitar rate limiting
             } catch (\Exception $e) {
-                Log::error("Error enviando notificación a paciente {$patient->id}: " . $e->getMessage());
+                Log::error("Error enviando notificación a paciente {$patient->id}: ".$e->getMessage());
             }
         }
 
@@ -1701,7 +1713,7 @@ class WhatsappBotService
             try {
                 $this->sendMessage($patient->phone, $msg);
             } catch (\Exception $e) {
-                Log::error("Error en notificación de cumpleaños para paciente {$patient->id}: " . $e->getMessage());
+                Log::error("Error en notificación de cumpleaños para paciente {$patient->id}: ".$e->getMessage());
             }
         }
     }
@@ -1719,7 +1731,7 @@ class WhatsappBotService
             $msg = "⏰ *RECORDATORIO DE CITA - MAÑANA* ⏰\n\n";
             $msg .= "¡Hola *{$apt->patient->first_name}*! 👋\n\n";
             $msg .= "Te recordamos tu cita de mañana:\n";
-            $msg .= '📅 ' . Carbon::parse($apt->date)->format('d/m/Y') . "\n";
+            $msg .= '📅 '.Carbon::parse($apt->date)->format('d/m/Y')."\n";
             $msg .= "⏰ {$apt->start_time}\n";
             $msg .= "🦷 {$apt->treatment}\n\n";
             $msg .= "📍 Av. Principal 456, Miraflores\n";
@@ -1728,7 +1740,7 @@ class WhatsappBotService
             try {
                 $this->sendMessage($apt->patient->phone, $msg);
             } catch (\Exception $e) {
-                Log::error("Error en recordatorio 24h para cita {$apt->id}: " . $e->getMessage());
+                Log::error("Error en recordatorio 24h para cita {$apt->id}: ".$e->getMessage());
             }
         }
     }
@@ -1740,7 +1752,7 @@ class WhatsappBotService
 
         $appointments = Appointment::with('patient')
             ->where('date', $today)
-            ->where('start_time', 'like', substr($twoHoursFromNow, 0, 2) . '%')
+            ->where('start_time', 'like', substr($twoHoursFromNow, 0, 2).'%')
             ->whereIn('status', ['pending', 'confirmed'])
             ->get();
 
@@ -1755,7 +1767,7 @@ class WhatsappBotService
             try {
                 $this->sendMessage($apt->patient->phone, $msg);
             } catch (\Exception $e) {
-                Log::error("Error en recordatorio 2h para cita {$apt->id}: " . $e->getMessage());
+                Log::error("Error en recordatorio 2h para cita {$apt->id}: ".$e->getMessage());
             }
         }
     }
@@ -1779,7 +1791,7 @@ class WhatsappBotService
             try {
                 $this->sendMessage($patient->phone, $msg);
             } catch (\Exception $e) {
-                Log::error("Error en campaña de limpieza para paciente {$patient->id}: " . $e->getMessage());
+                Log::error("Error en campaña de limpieza para paciente {$patient->id}: ".$e->getMessage());
             }
         }
     }
@@ -1803,7 +1815,7 @@ class WhatsappBotService
             try {
                 $this->sendMessage($patient->phone, $msg);
             } catch (\Exception $e) {
-                Log::error("Error en recordatorio de pago para paciente {$patient->id}: " . $e->getMessage());
+                Log::error("Error en recordatorio de pago para paciente {$patient->id}: ".$e->getMessage());
             }
         }
     }
@@ -1828,7 +1840,7 @@ class WhatsappBotService
             try {
                 $this->sendMessage($patient->phone, $msg);
             } catch (\Exception $e) {
-                Log::error("Error en solicitud de rating para paciente {$patient->id}: " . $e->getMessage());
+                Log::error("Error en solicitud de rating para paciente {$patient->id}: ".$e->getMessage());
             }
         }
     }

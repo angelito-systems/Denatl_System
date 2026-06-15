@@ -28,7 +28,7 @@ class UpdatePaymentRequest extends FormRequest
             'payment_method' => 'required|string',
             'receipt_type' => 'required|string',
             'status' => 'required|string',
-            'notes' => 'nullable|string'
+            'notes' => 'nullable|string',
         ];
     }
 }

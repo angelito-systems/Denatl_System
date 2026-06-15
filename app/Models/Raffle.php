@@ -10,8 +10,8 @@ class Raffle extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'description', 'status', 'draw_date', 
-        'winner_count', 'winning_logic', 'winning_nth_position'
+        'name', 'description', 'status', 'draw_date',
+        'winner_count', 'winning_logic', 'winning_nth_position',
     ];
 
     protected $casts = [

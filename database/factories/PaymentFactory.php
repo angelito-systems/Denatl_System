@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Patient;
 use App\Models\Payment;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,7 +19,7 @@ class PaymentFactory extends Factory
     public function definition(): array
     {
         return [
-            'patient_id' => \App\Models\Patient::factory(),
+            'patient_id' => Patient::factory(),
             'amount' => $this->faker->randomFloat(2, 50, 1500),
             'payment_method' => $this->faker->randomElement(['Efectivo', 'Tarjeta', 'Yape', 'Transferencia']),
             'receipt_type' => $this->faker->randomElement(['Boleta', 'Factura', 'Recibo']),

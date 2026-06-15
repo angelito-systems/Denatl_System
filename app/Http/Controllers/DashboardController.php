@@ -35,7 +35,7 @@ class DashboardController extends Controller
             ->where('date', Carbon::today()->toDateString())
             ->where(function ($q) {
                 $q->whereNull('projector_status')
-                  ->orWhere('projector_status', '!=', 'finished');
+                    ->orWhere('projector_status', '!=', 'finished');
             })
             ->whereTime('start_time', '>=', Carbon::now()->subHours(1)->format('H:i:s'))
             ->orderBy('start_time')

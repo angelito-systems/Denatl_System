@@ -40,8 +40,8 @@ class PatientImageController extends Controller
                 $filePath = $file->storeAs('patient-images/'.$patient->id, $fileName, 'local');
 
                 $title = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-                if (!empty($data['title'])) {
-                    $title = $filesCount > 1 ? $data['title'] . ' ' . $index : $data['title'];
+                if (! empty($data['title'])) {
+                    $title = $filesCount > 1 ? $data['title'].' '.$index : $data['title'];
                 }
 
                 $uploadedImages[] = $patient->patientImages()->create([

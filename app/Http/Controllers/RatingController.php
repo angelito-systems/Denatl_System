@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Rating;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class RatingController extends Controller
@@ -11,8 +10,9 @@ class RatingController extends Controller
     public function index()
     {
         $ratings = Rating::with('patient')->orderBy('created_at', 'desc')->get();
+
         return Inertia::render('Ratings/Index', [
-            'ratings' => $ratings
+            'ratings' => $ratings,
         ]);
     }
 

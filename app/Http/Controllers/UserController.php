@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -18,8 +18,8 @@ class UserController extends Controller
         if ($request->has('search') && $request->input('search') !== '') {
             $search = $request->input('search');
             $query->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%");
         }
 
         $users = $query->paginate(15)->withQueryString();
@@ -28,7 +28,7 @@ class UserController extends Controller
         return Inertia::render('Staff/Index', [
             'users' => $users,
             'roles' => $roles,
-            'filters' => $request->only(['search'])
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -68,11 +68,11 @@ class UserController extends Controller
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'username' => ['required','string','max:255', Rule::unique('users')->ignore($user->id)],
-            'email' => ['required','string','email','max:255', Rule::unique('users')->ignore($user->id)],
+            'username' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'role' => 'required|string|exists:roles,name',
             'room' => 'nullable|string|max:255',
-            'dni' => ['nullable','string','max:15', Rule::unique('users')->ignore($user->id)],
+            'dni' => ['nullable', 'string', 'max:15', Rule::unique('users')->ignore($user->id)],
             'cmp' => 'nullable|string|max:255',
         ]);
 
@@ -100,6 +100,7 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         $user->delete();
+
         return redirect()->back()->with('success', 'Personal eliminado exitosamente.');
     }
 }

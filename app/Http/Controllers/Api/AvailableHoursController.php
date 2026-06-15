@@ -3,18 +3,18 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\DoctorSchedule;
 use App\Models\Appointment;
-use Illuminate\Http\Request;
+use App\Models\DoctorSchedule;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class AvailableHoursController extends Controller
 {
     public function getAvailableHours(Request $request, User $dentist)
     {
         $request->validate([
-            'date' => 'required|date'
+            'date' => 'required|date',
         ]);
 
         $requestedDate = Carbon::parse($request->date)->startOfDay();
@@ -44,7 +44,7 @@ class AvailableHoursController extends Controller
 
             if ($schedule && $schedule->start_time && $schedule->end_time) {
                 $slots = $this->calculateSlotsForDay($dentist->id, $currentDate, $schedule);
-                
+
                 if (count($slots) > 0) {
                     $availableSlots = $slots;
                     $foundDate = $currentDate->format('Y-m-d');
@@ -60,18 +60,18 @@ class AvailableHoursController extends Controller
             'requested_date' => $request->date,
             'available_date' => $foundDate,
             'available_slots' => $availableSlots,
-            'requires_date_change' => $foundDate !== $request->date
+            'requires_date_change' => $foundDate !== $request->date,
         ]);
     }
 
     private function calculateSlotsForDay($dentistId, Carbon $date, DoctorSchedule $schedule)
     {
         $slots = [];
-        $startTime = Carbon::parse($date->format('Y-m-d') . ' ' . $schedule->start_time);
-        $endTime = Carbon::parse($date->format('Y-m-d') . ' ' . $schedule->end_time);
-        
-        $breakStart = $schedule->break_start ? Carbon::parse($date->format('Y-m-d') . ' ' . $schedule->break_start) : null;
-        $breakEnd = $schedule->break_end ? Carbon::parse($date->format('Y-m-d') . ' ' . $schedule->break_end) : null;
+        $startTime = Carbon::parse($date->format('Y-m-d').' '.$schedule->start_time);
+        $endTime = Carbon::parse($date->format('Y-m-d').' '.$schedule->end_time);
+
+        $breakStart = $schedule->break_start ? Carbon::parse($date->format('Y-m-d').' '.$schedule->break_start) : null;
+        $breakEnd = $schedule->break_end ? Carbon::parse($date->format('Y-m-d').' '.$schedule->break_end) : null;
 
         $appointments = Appointment::where('dentist_id', $dentistId)
             ->where('date', $date->format('Y-m-d'))
@@ -87,6 +87,7 @@ class AvailableHoursController extends Controller
             // Verificar si el bloque ya pasó (si es hoy)
             if ($date->isToday() && $currentTime->lt($now)) {
                 $currentTime->addMinutes(30);
+
                 continue;
             }
 
@@ -101,9 +102,9 @@ class AvailableHoursController extends Controller
             // Verificar si choca con otra cita
             $isBooked = false;
             foreach ($appointments as $apt) {
-                $aptStart = Carbon::parse($date->format('Y-m-d') . ' ' . $apt->start_time);
+                $aptStart = Carbon::parse($date->format('Y-m-d').' '.$apt->start_time);
                 // Asumimos 30 min de duración para simplificar
-                $aptEnd = $aptStart->copy()->addMinutes(30); 
+                $aptEnd = $aptStart->copy()->addMinutes(30);
 
                 // Si el slot se cruza con una cita existente
                 if ($currentTime->gte($aptStart) && $currentTime->lt($aptEnd)) {
@@ -112,7 +113,7 @@ class AvailableHoursController extends Controller
                 }
             }
 
-            if (!$inBreak && !$isBooked) {
+            if (! $inBreak && ! $isBooked) {
                 $slots[] = $currentTime->format('H:i');
             }
 

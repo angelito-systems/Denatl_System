@@ -39,7 +39,7 @@ return new class extends Migration
                 'sunat_hash',
                 'sunat_xml_path',
                 'sunat_cdr_path',
-                'sunat_message'
+                'sunat_message',
             ]);
         });
     }

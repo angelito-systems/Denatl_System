@@ -10,8 +10,8 @@ class RaffleParticipant extends Model
     use HasFactory;
 
     protected $fillable = [
-        'raffle_id', 'patient_id', 'phone_number', 
-        'is_winner', 'raffle_prize_id'
+        'raffle_id', 'patient_id', 'phone_number',
+        'is_winner', 'raffle_prize_id',
     ];
 
     protected $casts = [

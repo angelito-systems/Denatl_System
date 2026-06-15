@@ -19,7 +19,7 @@ return new class extends Migration
             $table->boolean('is_winner')->default(false);
             $table->foreignId('raffle_prize_id')->nullable()->constrained('raffle_prizes')->onDelete('set null');
             $table->timestamps();
-            
+
             // Un teléfono solo puede participar una vez por sorteo
             $table->unique(['raffle_id', 'phone_number']);
         });

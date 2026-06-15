@@ -4,17 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Cashbox;
 use App\Models\CashboxTransaction;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class CashboxController extends Controller
 {
     public function index()
     {
         $currentCashbox = Cashbox::where('status', 'open')->latest()->first();
-        
+
         $transactions = [];
         $totals = ['income' => 0, 'expense' => 0];
 
@@ -38,7 +37,7 @@ class CashboxController extends Controller
             'currentCashbox' => $currentCashbox,
             'transactions' => $transactions,
             'totals' => $totals,
-            'recentCashboxes' => $recentCashboxes
+            'recentCashboxes' => $recentCashboxes,
         ]);
     }
 
@@ -46,7 +45,7 @@ class CashboxController extends Controller
     {
         $request->validate([
             'opening_amount' => 'required|numeric|min:0',
-            'notes' => 'nullable|string'
+            'notes' => 'nullable|string',
         ]);
 
         if (Cashbox::where('status', 'open')->exists()) {
@@ -73,7 +72,7 @@ class CashboxController extends Controller
         $transactions = CashboxTransaction::where('cashbox_id', $cashbox->id)->get();
         $income = $transactions->where('type', 'income')->sum('amount');
         $expense = $transactions->where('type', 'expense')->sum('amount');
-        
+
         $expectedAmount = $cashbox->opening_amount + $income - $expense;
 
         $cashbox->update([
@@ -92,7 +91,7 @@ class CashboxController extends Controller
             'type' => 'required|in:income,expense',
             'amount' => 'required|numeric|min:0.01',
             'payment_method' => 'required|string',
-            'description' => 'required|string'
+            'description' => 'required|string',
         ]);
 
         if ($cashbox->status === 'closed') {
@@ -105,7 +104,7 @@ class CashboxController extends Controller
             'amount' => $request->amount,
             'payment_method' => $request->payment_method,
             'description' => $request->description,
-            'user_id' => auth()->id()
+            'user_id' => auth()->id(),
         ]);
 
         return redirect()->back()->with('success', 'Transacción guardada correctamente.');

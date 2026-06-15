@@ -17,7 +17,7 @@ class CashboxTransaction extends Model
         'description',
         'related_model_type',
         'related_model_id',
-        'user_id'
+        'user_id',
     ];
 
     public function cashbox()

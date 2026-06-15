@@ -24,23 +24,23 @@ class NotifyRaffleWinners implements ShouldQueue
     public function handle(EvolutionApiService $evolutionApi): void
     {
         $raffle = Raffle::with('winners.prize')->find($this->raffleId);
-        if (!$raffle) {
+        if (! $raffle) {
             return;
         }
 
         foreach ($raffle->winners as $winner) {
             $msg = "🎉 *¡FELICIDADES!* 🎉\n\n";
             $msg .= "¡Has resultado ganador(a) en nuestro sorteo: *{$raffle->name}*!\n\n";
-            
+
             if ($winner->prize) {
                 $msg .= "🏆 Tu premio es: *{$winner->prize->name}*\n\n";
             }
-            
+
             $msg .= "Por favor, comunícate con nosotros para coordinar la entrega de tu premio.\n";
-            $msg .= "¡Gracias por participar y confiar en nosotros! 🦷💙";
+            $msg .= '¡Gracias por participar y confiar en nosotros! 🦷💙';
 
             $evolutionApi->sendText($winner->phone_number, $msg);
-            
+
             // Pausa breve para evitar limite de tasa (Rate Limit) de la API
             sleep(2);
         }

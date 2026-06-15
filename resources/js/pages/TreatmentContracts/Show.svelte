@@ -16,7 +16,7 @@
     import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
     import { Input } from '@/components/ui/input';
     import { Label } from '@/components/ui/label';
-    import { useForm, router, Link } from '@inertiajs/svelte';
+    import { useForm, router, Link, page } from '@inertiajs/svelte';
     import { ReceiptText, CheckCircle2, PenTool, FileText, MessageCircle, Trash2, ArrowLeft, UserRound, Wallet, TrendingUp, PiggyBank } from 'lucide-svelte';
     import SignaturePadModal from '@/components/SignaturePadModal.svelte';
     import SendWhatsappButton from '@/components/SendWhatsappButton.svelte';
@@ -47,7 +47,7 @@
         treatment_contract_id: contract.id,
         amount: '',
         payment_method: 'Transferencia',
-        receipt_type: 'Boleta',
+        receipt_type: ($page.props.sunatConfig?.active ?? false) ? 'Boleta' : 'Ticket',
         status: 'Pagado',
         notes: '',
     });
@@ -335,8 +335,10 @@
                 <div class="grid gap-2">
                     <Label>Comprobante</Label>
                     <select bind:value={paymentForm.receipt_type} class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                        <option value="Boleta">Boleta</option>
-                        <option value="Factura">Factura</option>
+                        {#if $page.props.sunatConfig?.active ?? false}
+                            <option value="Boleta">Boleta</option>
+                            <option value="Factura">Factura</option>
+                        {/if}
                         <option value="Ticket">Ticket Interno</option>
                     </select>
                 </div>

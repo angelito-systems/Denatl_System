@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Configuration;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -35,7 +36,7 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $config = class_exists(\App\Models\Configuration::class) ? \App\Models\Configuration::all() : collect([]);
+        $config = class_exists(Configuration::class) ? Configuration::all() : collect([]);
 
         return [
             ...parent::share($request),

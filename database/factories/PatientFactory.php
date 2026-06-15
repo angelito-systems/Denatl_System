@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Patient;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Patient>
+ * @extends Factory<Patient>
  */
 class PatientFactory extends Factory
 {
@@ -27,7 +27,7 @@ class PatientFactory extends Factory
         return [
             'dni' => $this->faker->unique()->numerify('########'), // 8 digits in Peru
             'first_name' => $this->faker->firstName(),
-            'last_name' => $this->faker->lastName() . ' ' . $this->faker->lastName(),
+            'last_name' => $this->faker->lastName().' '.$this->faker->lastName(),
             'phone' => $this->faker->numerify('9########'),
             'email' => $this->faker->unique()->safeEmail(),
             'date_of_birth' => $this->faker->dateTimeBetween('-80 years', '-5 years')->format('Y-m-d'),

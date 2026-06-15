@@ -11,7 +11,7 @@ class PatientMediaController extends Controller
     {
         $request->validate([
             'file' => 'required|file|max:10240', // 10MB max
-            'name' => 'nullable|string|max:255'
+            'name' => 'nullable|string|max:255',
         ]);
 
         $name = $request->input('name') ?: $request->file('file')->getClientOriginalName();

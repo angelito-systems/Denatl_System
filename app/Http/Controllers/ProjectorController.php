@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
 use App\Models\Appointment;
+use Inertia\Inertia;
 
 class ProjectorController extends Controller
 {
@@ -16,7 +15,7 @@ class ProjectorController extends Controller
     public function state()
     {
         $today = now()->format('Y-m-d');
-        
+
         $calling = Appointment::with(['patient', 'dentist'])
             ->where('date', $today)
             ->where('projector_status', 'calling')
@@ -32,9 +31,9 @@ class ProjectorController extends Controller
 
         $waiting = Appointment::with(['patient', 'dentist'])
             ->where('date', $today)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('projector_status', 'waiting')
-                  ->orWhere('status', 'confirmed');
+                    ->orWhere('status', 'confirmed');
             })
             ->whereNotIn('projector_status', ['calling', 'in_progress', 'finished'])
             ->whereTime('start_time', '>=', now()->subHours(1)->format('H:i:s'))
@@ -45,7 +44,7 @@ class ProjectorController extends Controller
         return response()->json([
             'calling' => $calling,
             'inProgress' => $inProgress,
-            'waiting' => $waiting
+            'waiting' => $waiting,
         ]);
     }
 
@@ -58,7 +57,7 @@ class ProjectorController extends Controller
 
         $appointment->update([
             'projector_status' => 'calling',
-            'status' => 'confirmed' // Or whatever fits
+            'status' => 'confirmed', // Or whatever fits
         ]);
 
         return redirect()->back()->with('success', 'Paciente llamado.');
@@ -67,8 +66,9 @@ class ProjectorController extends Controller
     public function startPatient(Appointment $appointment)
     {
         $appointment->update([
-            'projector_status' => 'in_progress'
+            'projector_status' => 'in_progress',
         ]);
+
         return redirect()->back()->with('success', 'Paciente en consulta.');
     }
 
@@ -76,15 +76,15 @@ class ProjectorController extends Controller
     {
         $appointment->update([
             'projector_status' => 'finished',
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         // Auto-call al siguiente paciente en espera para este mismo doctor
         $nextAppointment = Appointment::where('date', now()->format('Y-m-d'))
             ->where('dentist_id', $appointment->dentist_id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('projector_status', 'waiting')
-                  ->orWhere('status', 'confirmed');
+                    ->orWhere('status', 'confirmed');
             })
             ->whereNotIn('projector_status', ['calling', 'in_progress', 'finished'])
             ->whereTime('start_time', '>=', now()->subHours(1)->format('H:i:s'))
@@ -94,8 +94,9 @@ class ProjectorController extends Controller
         if ($nextAppointment) {
             $nextAppointment->update([
                 'projector_status' => 'calling',
-                'status' => 'confirmed'
+                'status' => 'confirmed',
             ]);
+
             return redirect()->back()->with('success', 'Consulta finalizada y próximo paciente llamado automáticamente.');
         }
 

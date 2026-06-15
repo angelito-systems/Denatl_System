@@ -4,11 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePaymentRequest;
 use App\Http\Requests\UpdatePaymentRequest;
+use App\Models\Cashbox;
+use App\Models\CashboxTransaction;
+use App\Models\Configuration;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Models\TreatmentContract;
 use App\Services\PdfGeneratorService;
 use App\Services\SunatService;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -31,9 +37,10 @@ class PaymentController extends Controller
         }
 
         $payments = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
-        $patients = Patient::with(['treatmentContracts' => function($q) { 
-            $q->where('status', '!=', 'Finalizado'); 
+        $patients = Patient::with(['treatmentContracts' => function ($q) {
+            $q->where('status', '!=', 'Finalizado');
         }])->select('id', 'first_name', 'last_name', 'dni', 'phone')->get();
+
         return Inertia::render('Payments/Index', [
             'payments' => $payments,
             'patients' => $patients,
@@ -44,13 +51,13 @@ class PaymentController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StorePaymentRequest $request, SunatService $sunatService, PdfGeneratorService $pdfService, \App\Services\WhatsAppService $whatsappService)
+    public function store(StorePaymentRequest $request, SunatService $sunatService, PdfGeneratorService $pdfService, WhatsAppService $whatsappService)
     {
         $validatedData = $request->validated();
-        $isSunatActive = \App\Models\Configuration::get('sunat_active') === '1';
+        $isSunatActive = Configuration::get('sunat_active') === '1';
 
         // If SUNAT is inactive, force the receipt type to Ticket regardless of the input
-        if (!$isSunatActive && in_array($validatedData['receipt_type'] ?? '', ['Boleta', 'Factura'])) {
+        if (! $isSunatActive && in_array($validatedData['receipt_type'] ?? '', ['Boleta', 'Factura'])) {
             $validatedData['receipt_type'] = 'Ticket';
         }
 
@@ -59,24 +66,24 @@ class PaymentController extends Controller
 
         // Update contract balance if applicable
         if ($payment->treatment_contract_id) {
-            $contract = \App\Models\TreatmentContract::find($payment->treatment_contract_id);
+            $contract = TreatmentContract::find($payment->treatment_contract_id);
             if ($contract && $contract->total_paid >= $contract->total_cost) {
                 $contract->update(['status' => 'Finalizado']);
             }
         }
 
         // Registrar en Caja (si hay una abierta)
-        $cashbox = \App\Models\Cashbox::where('status', 'open')->latest()->first();
+        $cashbox = Cashbox::where('status', 'open')->latest()->first();
         if ($cashbox) {
-            \App\Models\CashboxTransaction::create([
+            CashboxTransaction::create([
                 'cashbox_id' => $cashbox->id,
                 'type' => 'income',
                 'amount' => $payment->amount,
                 'payment_method' => $payment->payment_method,
-                'description' => 'Pago de cuota/tratamiento - ' . ($payment->patient->first_name ?? '') . ' ' . ($payment->patient->last_name ?? ''),
+                'description' => 'Pago de cuota/tratamiento - '.($payment->patient->first_name ?? '').' '.($payment->patient->last_name ?? ''),
                 'related_model_type' => get_class($payment),
                 'related_model_id' => $payment->id,
-                'user_id' => auth()->id() ?? 1
+                'user_id' => auth()->id() ?? 1,
             ]);
         }
 
@@ -94,7 +101,7 @@ class PaymentController extends Controller
         if ($payment->patient && $payment->patient->phone) {
             try {
                 $pdf = $pdfService->generarComprobante($payment);
-                
+
                 // Save to temp file to get base64
                 $tmpPath = tempnam(sys_get_temp_dir(), 'pdf_').'.pdf';
                 $pdf->save($tmpPath);
@@ -103,12 +110,12 @@ class PaymentController extends Controller
 
                 $tratamiento = $payment->treatmentContract ? $payment->treatmentContract->treatment_name : 'atención dental';
                 $saldo = $payment->treatmentContract ? number_format($payment->treatmentContract->balance_due, 2) : '0.00';
-                
-                $mensaje = "Hola {$payment->patient->first_name}, se registró tu pago de S/ " . number_format($payment->amount, 2) . " para tu tratamiento de {$tratamiento}.\n";
+
+                $mensaje = "Hola {$payment->patient->first_name}, se registró tu pago de S/ ".number_format($payment->amount, 2)." para tu tratamiento de {$tratamiento}.\n";
                 if ($payment->treatment_contract_id) {
                     $mensaje .= "Saldo pendiente: S/ {$saldo}.\n";
                 }
-                $mensaje .= "Adjuntamos tu comprobante. Gracias por confiar en nosotros 🦷";
+                $mensaje .= 'Adjuntamos tu comprobante. Gracias por confiar en nosotros 🦷';
 
                 $whatsappService->enviarDocumento(
                     $payment->patient->phone,
@@ -117,7 +124,7 @@ class PaymentController extends Controller
                     $mensaje
                 );
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Error enviando ticket por WhatsApp: ' . $e->getMessage());
+                Log::error('Error enviando ticket por WhatsApp: '.$e->getMessage());
             }
         }
 
@@ -168,8 +175,8 @@ class PaymentController extends Controller
 
     public function emitirSunat(Request $request, Payment $payment, SunatService $sunatService)
     {
-        $isSunatActive = \App\Models\Configuration::get('sunat_active') === '1';
-        if (!$isSunatActive) {
+        $isSunatActive = Configuration::get('sunat_active') === '1';
+        if (! $isSunatActive) {
             return redirect()->back()->with('error', 'El sistema está configurado para emitir solo Tickets Internos. Habilite SUNAT en Configuración primero.');
         }
 

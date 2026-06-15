@@ -7,6 +7,11 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -23,9 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'role' => RoleMiddleware::class,
+            'permission' => PermissionMiddleware::class,
+            'role_or_permission' => RoleOrPermissionMiddleware::class,
         ]);
 
         $middleware->web(append: [
@@ -38,16 +43,17 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
-        $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response, \Throwable $exception, Request $request) {
+        $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
             if (! app()->environment(['local', 'testing']) && in_array($response->getStatusCode(), [500, 503, 404, 403])) {
-                return \Inertia\Inertia::render('Errors/Error', ['status' => $response->getStatusCode()])
+                return Inertia::render('Errors/Error', ['status' => $response->getStatusCode()])
                     ->toResponse($request)
                     ->setStatusCode($response->getStatusCode());
             } elseif (in_array($response->getStatusCode(), [403, 404])) {
-                return \Inertia\Inertia::render('Errors/Error', ['status' => $response->getStatusCode()])
+                return Inertia::render('Errors/Error', ['status' => $response->getStatusCode()])
                     ->toResponse($request)
                     ->setStatusCode($response->getStatusCode());
             }
+
             return $response;
         });
     })->create();

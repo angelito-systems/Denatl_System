@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 
 #[Fillable([
     'patient_id',
@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
     'installment_amount',
     'start_date',
     'status',
-    'document_id'
+    'document_id',
 ])]
 class TreatmentContract extends Model
 {

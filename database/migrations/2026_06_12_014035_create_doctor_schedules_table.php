@@ -18,7 +18,7 @@ return new class extends Migration
             $table->time('break_end')->nullable();
             $table->boolean('is_working')->default(false);
             $table->timestamps();
-            
+
             $table->unique(['user_id', 'day_of_week']);
         });
     }

@@ -26,7 +26,7 @@ class UpdateTreatmentRequest extends FormRequest
             'name' => 'required|string|max:255',
             'category' => 'required|string|max:255',
             'base_price' => 'required|numeric|min:0',
-            'estimated_duration_minutes' => 'required|integer|min:1'
+            'estimated_duration_minutes' => 'required|integer|min:1',
         ];
     }
 }

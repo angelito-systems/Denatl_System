@@ -6,6 +6,7 @@ use App\Http\Requests\StoreAppointmentRequest;
 use App\Http\Requests\UpdateAppointmentRequest;
 use App\Models\Appointment;
 use App\Models\Patient;
+use App\Models\Treatment;
 use App\Models\User;
 use App\Services\WhatsAppService;
 use Carbon\Carbon;
@@ -40,11 +41,11 @@ class AppointmentController extends Controller
         $dentists = User::select('id', 'first_name', 'last_name')->get()->map(function ($user) {
             return [
                 'id' => $user->id,
-                'name' => $user->first_name . ' ' . $user->last_name,
+                'name' => $user->first_name.' '.$user->last_name,
             ];
         });
 
-        $treatments = \App\Models\Treatment::select('id', 'name')->get();
+        $treatments = Treatment::select('id', 'name')->get();
 
         return Inertia::render('Appointments/Index', [
             'patients' => $patients,

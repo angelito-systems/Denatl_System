@@ -37,7 +37,7 @@ return new class extends Migration
                 'allergies',
                 'medical_notes',
                 'family_history',
-                'current_medication'
+                'current_medication',
             ]);
         });
     }

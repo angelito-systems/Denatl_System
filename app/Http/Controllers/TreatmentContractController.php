@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Document;
 use App\Models\TreatmentContract;
 use Illuminate\Http\Request;
 
@@ -17,7 +18,7 @@ class TreatmentContractController extends Controller
             'installments' => 'nullable|integer|min:1',
             'installment_amount' => 'nullable|numeric|min:0',
             'start_date' => 'nullable|date',
-            'status' => 'nullable|string'
+            'status' => 'nullable|string',
         ]);
 
         if (empty($validated['status'])) {
@@ -27,11 +28,11 @@ class TreatmentContractController extends Controller
         $contract = TreatmentContract::create($validated);
 
         // Crear documento asociado para la firma
-        $document = \App\Models\Document::create([
+        $document = Document::create([
             'patient_id' => $contract->patient_id,
             'type' => 'financiamiento',
-            'name' => 'Contrato de ' . $contract->treatment_name,
-            'status' => 'Borrador'
+            'name' => 'Contrato de '.$contract->treatment_name,
+            'status' => 'Borrador',
         ]);
 
         $contract->update(['document_id' => $document->id]);
@@ -42,6 +43,7 @@ class TreatmentContractController extends Controller
     public function show(TreatmentContract $treatment_contract)
     {
         $treatment_contract->load(['patient', 'payments', 'document.media']);
+
         return inertia('TreatmentContracts/Show', [
             'contract' => $treatment_contract,
         ]);
@@ -56,7 +58,7 @@ class TreatmentContractController extends Controller
             'installments' => 'nullable|integer|min:1',
             'installment_amount' => 'nullable|numeric|min:0',
             'start_date' => 'nullable|date',
-            'status' => 'nullable|string'
+            'status' => 'nullable|string',
         ]);
 
         $treatment_contract->update($validated);
@@ -67,7 +69,7 @@ class TreatmentContractController extends Controller
     public function destroy(TreatmentContract $treatment_contract)
     {
         if ($treatment_contract->document_id) {
-            $document = \App\Models\Document::find($treatment_contract->document_id);
+            $document = Document::find($treatment_contract->document_id);
             if ($document) {
                 // Delete media if using spatie medialibrary (handled by Document model usually, but soft deletes might keep them)
                 $document->delete();
