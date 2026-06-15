@@ -24,7 +24,6 @@ services:
       - BROWSERSHOT_NPM_BIN=/usr/bin/npm
       - BROWSERSHOT_CHROME_PATH=/usr/bin/chromium
       - BROWSERSHOT_NODE_MODULES_PATH=/var/www/html/node_modules
-      - EVOLUTION_WEBHOOK_TOKEN=qW6cH8oR7eY3bJxN9kLmP2vFtA5sDzX1cUgI4nBrM0Q
     volumes:
       - ./.env:/var/www/html/.env
       - ./storage:/var/www/html/storage
