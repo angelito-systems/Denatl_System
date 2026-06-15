@@ -43,7 +43,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $roleAdmin->givePermissionTo(Permission::all());
 
         $roleDentista = Role::firstOrCreate(['name' => 'Dentista']);
-        $roleDentista->givePermissionTo([
+        $roleDentista->syncPermissions([
             'ver_dashboard', 'ver_pacientes', 'crear_pacientes', 'editar_pacientes',
             'ver_citas', 'crear_citas', 'editar_citas',
             'ver_facturacion', 'crear_pagos',
@@ -53,16 +53,15 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         $roleRecep = Role::firstOrCreate(['name' => 'Recepcionista']);
-        $roleRecep->givePermissionTo([
+        $roleRecep->syncPermissions([
             'ver_dashboard', 'ver_pacientes', 'crear_pacientes', 'editar_pacientes',
             'ver_citas', 'crear_citas', 'editar_citas', 'cancelar_citas',
-            'ver_facturacion', 'crear_pagos',
             'ver_mensajes_crm', 'enviar_mensajes',
             'imprimir_tickets',
         ]);
 
         $roleAsistente = Role::firstOrCreate(['name' => 'Asistente']);
-        $roleAsistente->givePermissionTo([
+        $roleAsistente->syncPermissions([
             'ver_dashboard', 'ver_pacientes', 'ver_citas',
         ]);
 
