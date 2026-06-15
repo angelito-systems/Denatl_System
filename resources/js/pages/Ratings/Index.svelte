@@ -18,6 +18,8 @@
         DialogTitle,
         DialogDescription,
     } from '@/components/ui/dialog';
+    import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+    import { Toast } from '@/lib/utils/toast';
 
     let { ratings } = $props();
 
@@ -31,9 +33,13 @@
     }
 
     function deleteRating(id: number) {
-        if (confirm('¿Estás seguro de eliminar esta valoración?')) {
-            router.delete(`/ratings/${id}`);
-        }
+        Toast.confirm(
+            '¿Estás seguro de eliminar esta valoración?',
+            () => {
+                router.delete(`/ratings/${id}`);
+            },
+            { type: 'destructive', confirmText: 'Eliminar' }
+        );
     }
 
     function formatDate(dateString: string) {

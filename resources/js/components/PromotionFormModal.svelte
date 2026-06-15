@@ -7,7 +7,7 @@
     import { Input } from '@/components/ui/input';
     import { Label } from '@/components/ui/label';
     import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
     import { untrack } from 'svelte';
 
     let { isOpen = $bindable(false), promotion = null } = $props();
@@ -64,7 +64,7 @@
             preserveScroll: true,
             onSuccess: () => {
                 isOpen = false;
-                toast.success(isEditMode ? 'Promoción actualizada exitosamente' : 'Promoción registrada exitosamente');
+                Toast.success('Éxito', isEditMode ? 'Promoción actualizada exitosamente' : 'Promoción registrada exitosamente');
                 if (!isEditMode) {
                     form.reset();
                 }

@@ -11,6 +11,8 @@
         TableHeader,
         TableRow,
     } from '@/components/ui/table';
+    import { Card, CardContent } from '@/components/ui/card';
+    import { Toast } from '@/lib/utils/toast';
     import RaffleFormModal from '@/components/RaffleFormModal.svelte';
 
     let { raffles } = $props();
@@ -29,9 +31,17 @@
     }
 
     function deleteRaffle(id: number) {
-        if (confirm('¿Estás seguro de eliminar este sorteo? Se eliminarán todos los participantes y premios.')) {
-            router.delete(`/raffles/${id}`);
-        }
+        Toast.confirm(
+            '¿Estás seguro de eliminar este sorteo?',
+            () => {
+                router.delete(`/raffles/${id}`);
+            },
+            {
+                message: 'Se eliminarán todos los participantes y premios.',
+                type: 'destructive',
+                confirmText: 'Eliminar'
+            }
+        );
     }
 
     function goToRaffle(id: number) {

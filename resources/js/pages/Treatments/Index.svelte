@@ -25,7 +25,7 @@
     import { index } from '@/routes/treatments';
     import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
     import { Label } from '@/components/ui/label';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
     import { Loader2 } from 'lucide-svelte';
 
     let { treatments, filters } = $props();
@@ -71,7 +71,7 @@
                 preserveScroll: true,
                 onSuccess: () => {
                     isTreatmentModalOpen = false;
-                    toast.success('Tratamiento actualizado');
+                    Toast.success('Éxito', 'Tratamiento actualizado');
                 }
             });
         } else {
@@ -80,19 +80,23 @@
                 onSuccess: () => {
                     isTreatmentModalOpen = false;
                     treatmentForm.reset();
-                    toast.success('Tratamiento creado');
+                    Toast.success('Éxito', 'Tratamiento creado');
                 }
             });
         }
     }
 
     function deleteTreatment(id: number) {
-        if (confirm('¿Seguro que deseas eliminar este tratamiento?')) {
-            router.delete(`/treatments/${id}`, {
-                preserveScroll: true,
-                onSuccess: () => toast.success('Tratamiento eliminado')
-            });
-        }
+        Toast.confirm(
+            '¿Seguro que deseas eliminar este tratamiento?',
+            () => {
+                router.delete(`/treatments/${id}`, {
+                    preserveScroll: true,
+                    onSuccess: () => Toast.success('Éxito', 'Tratamiento eliminado')
+                });
+            },
+            { type: 'destructive', confirmText: 'Eliminar' }
+        );
     }
 </script>
 

@@ -193,6 +193,23 @@ class WhatsAppService
             if ($response->successful()) {
                 Log::info("Documento WhatsApp enviado a {$telefono}: {$fileName}");
 
+                $responseData = $response->json();
+                $messageId = $responseData['key']['id'] ?? 'OUT_'.uniqid();
+
+                $conversation = Conversation::where('phone_number', $telefono)->first();
+                if ($conversation) {
+                    WhatsappMessage::create([
+                        'conversation_id' => $conversation->id,
+                        'remote_jid' => "{$telefono}@s.whatsapp.net",
+                        'sender_type' => 'advisor',
+                        'content' => $caption ?: "[Documento] {$fileName}",
+                        'type' => 'document',
+                        'read_status' => true,
+                        'message_id' => $messageId,
+                    ]);
+                    $conversation->update(['last_message_at' => now()]);
+                }
+
                 return true;
             }
 
@@ -201,7 +218,7 @@ class WhatsAppService
             return false;
 
         } catch (\Exception $e) {
-            Log::error('Error al enviar mensaje por WhatsApp (Exception): ' . $e->getMessage());
+            Log::error('Error al enviar mensaje por WhatsApp (Exception): '.$e->getMessage());
 
             return false;
         }
@@ -213,7 +230,95 @@ class WhatsAppService
     public function enviarMediaBase64(string $telefono, string $base64, string $mimetype, string $fileName, string $mensaje = ''): bool
     {
         try {
+            if ($mimetype === 'image/webp') {
+                return $this->enviarSticker($telefono, $base64);
+            }
+
             $url = "{$this->apiUrl}/message/sendMedia/{$this->instance}";
+            $telefono = preg_replace('/[^0-9]/', '', $telefono);
+
+            $mediatype = 'document';
+            if (str_starts_with($mimetype, 'image/')) {
+                $mediatype = 'image';
+            } elseif (str_starts_with($mimetype, 'video/')) {
+                $mediatype = 'video';
+            } elseif (str_starts_with($mimetype, 'audio/')) {
+                $mediatype = 'audio';
+            }
+
+            // Fuerza el tipo a audio si es una nota de voz grabada desde el frontend,
+            // ya que PHP suele detectar los archivos webm (incluso de solo audio) como video/webm
+            if (str_contains($fileName, 'nota_de_voz')) {
+                $mediatype = 'audio';
+            }
+
+            // Route to correct endpoint based on media type
+            if ($mediatype === 'audio') {
+                $url = "{$this->apiUrl}/message/sendWhatsAppAudio/{$this->instance}";
+                $payload = [
+                    'number' => $telefono,
+                    'audio' => $base64,
+                    'delay' => 1000, // Da un pequeño retraso natural
+                ];
+            } else {
+                $url = "{$this->apiUrl}/message/sendMedia/{$this->instance}";
+                $payload = [
+                    'number' => $telefono,
+                    'mediatype' => $mediatype,
+                    'mimetype' => $mimetype,
+                    'caption' => $mensaje,
+                    'media' => $base64,
+                    'fileName' => $fileName,
+                ];
+            }
+
+            $response = Http::withHeaders([
+                'apikey' => $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($url, $payload);
+
+            if ($response->successful()) {
+                Log::info("Media WhatsApp enviada a {$telefono}: {$fileName}");
+
+                $responseData = $response->json();
+                $messageId = $responseData['key']['id'] ?? 'OUT_'.uniqid();
+
+                $conversation = Conversation::where('phone_number', $telefono)->first();
+                if ($conversation) {
+                    // Para texto capitalizado como [Video], [Audio]
+                    $typeTitle = ucfirst($mediatype);
+                    WhatsappMessage::create([
+                        'conversation_id' => $conversation->id,
+                        'remote_jid' => "{$telefono}@s.whatsapp.net",
+                        'sender_type' => 'advisor',
+                        'content' => $mensaje ?: "[{$typeTitle}] {$fileName}",
+                        'type' => $mediatype,
+                        'read_status' => true,
+                        'message_id' => $messageId,
+                    ]);
+                    $conversation->update(['last_message_at' => now()]);
+                }
+
+                return true;
+            }
+
+            Log::error('Error Evolution API Media: '.$response->body());
+
+            return false;
+        } catch (\Exception $e) {
+            Log::error('Error al enviar media por WhatsApp (Exception): '.$e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * Enviar Sticker
+     */
+    public function enviarSticker(string $telefono, string $stickerBase64): bool
+    {
+        try {
+            $url = "{$this->apiUrl}/message/sendSticker/{$this->instance}";
             $telefono = preg_replace('/[^0-9]/', '', $telefono);
 
             $response = Http::withHeaders([
@@ -221,17 +326,55 @@ class WhatsAppService
                 'Content-Type' => 'application/json',
             ])->post($url, [
                 'number' => $telefono,
-                'mediaMessage' => [
-                    'mediatype' => 'document',
-                    'caption' => $mensaje,
-                    'media' => $base64,
-                    'fileName' => $fileName,
-                ],
+                'sticker' => $stickerBase64,
             ]);
 
-            return $response->successful();
+            if ($response->successful()) {
+                Log::info("Sticker WhatsApp enviado a {$telefono}");
+
+                return true;
+            }
+
+            Log::error('Error Evolution API Sticker: '.$response->body());
+
+            return false;
         } catch (\Exception $e) {
-            Log::error('Error al enviar media por WhatsApp (Exception): ' . $e->getMessage());
+            Log::error('Error al enviar sticker por WhatsApp (Exception): '.$e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * Enviar Reacción a un mensaje
+     */
+    public function enviarReaccion(string $telefono, string $messageId, string $emoji): bool
+    {
+        try {
+            $url = "{$this->apiUrl}/message/sendReaction/{$this->instance}";
+            $telefono = preg_replace('/[^0-9]/', '', $telefono);
+
+            $response = Http::withHeaders([
+                'apikey' => $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($url, [
+                'number' => $telefono,
+                'reaction' => $emoji,
+                'messageId' => $messageId,
+            ]);
+
+            if ($response->successful()) {
+                Log::info("Reacción '{$emoji}' enviada a {$telefono} para el mensaje {$messageId}");
+
+                return true;
+            }
+
+            Log::error('Error Evolution API Reacción: '.$response->body());
+
+            return false;
+        } catch (\Exception $e) {
+            Log::error('Error al enviar reacción por WhatsApp (Exception): '.$e->getMessage());
+
             return false;
         }
     }

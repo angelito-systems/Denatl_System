@@ -28,6 +28,7 @@
     import OdontogramaHistoryModal from '@/components/odontograma/OdontogramaHistoryModal.svelte';
     import ContratosDocumentos from './ContratosDocumentos.svelte';
     import ContractsTab from './ContractsTab.svelte';
+    import ClinicalImagesTab from './ClinicalImagesTab.svelte';
     import SendWhatsappButton from '@/components/SendWhatsappButton.svelte';
     import confetti from 'canvas-confetti';
     import { onMount } from 'svelte';
@@ -62,6 +63,12 @@
     let isBirthdayToday = $state(false);
 
     onMount(() => {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        if (tab && ['general', 'odontogram', 'history', 'contracts', 'images'].includes(tab)) {
+            activeTab = tab;
+        }
+
         if (patient.date_of_birth) {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -170,6 +177,14 @@
             }
         });
     }
+
+    $effect(() => {
+        if (activeTab) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', activeTab);
+            window.history.replaceState({}, '', url);
+        }
+    });
 </script>
 
 <AppHead title={`Perfil - ${patient.first_name} ${patient.last_name}`} />
@@ -234,9 +249,10 @@
     <Tabs bind:value={activeTab} class="w-full">
             <TabsList class="mb-4 flex h-auto flex-wrap w-full lg:w-auto justify-start">
                 <TabsTrigger class="flex-1" value="general">Info. General</TabsTrigger>
-                <TabsTrigger class="flex-1" value="odontograma">Odontograma</TabsTrigger>
+                <TabsTrigger class="flex-1" value="odontogram">Odontograma</TabsTrigger>
                 <TabsTrigger class="flex-1" value="history">Evoluciones</TabsTrigger>
-                <TabsTrigger class="flex-1" value="contratos">Contratos y Financiamiento</TabsTrigger>
+                <TabsTrigger class="flex-1" value="contracts">Contratos y Financiamiento</TabsTrigger>
+                <TabsTrigger class="flex-1" value="images">Imágenes Clínicas</TabsTrigger>
             </TabsList>
 
         <TabsContent value="general" class="mt-6">
@@ -367,7 +383,7 @@
             </form>
         </TabsContent>
 
-        <TabsContent value="odontograma" class="mt-6">
+        <TabsContent value="odontogram" class="mt-6">
             <Card class="border-0 shadow-lg">
                 <CardHeader>
                     <CardTitle>Odontograma Inicial</CardTitle>
@@ -506,12 +522,16 @@
             </div>
         </TabsContent>
 
-        <TabsContent value="contratos" class="mt-6 space-y-8">
+        <TabsContent value="contracts" class="mt-6 space-y-8">
             <ContractsTab {patient} {treatments} />
             <div class="pt-6 border-t">
                 <h3 class="text-lg font-medium mb-4">Documentos Generales</h3>
                 <ContratosDocumentos {patient} />
             </div>
+        </TabsContent>
+
+        <TabsContent value="images" class="mt-6">
+            <ClinicalImagesTab {patient} />
         </TabsContent>
     </Tabs>
 </div>

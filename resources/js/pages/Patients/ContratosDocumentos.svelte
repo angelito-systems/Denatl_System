@@ -10,7 +10,7 @@
     import PdfViewerModal from '@/components/PdfViewerModal.svelte';
     import SignaturePadModal from '@/components/SignaturePadModal.svelte';
     import SendWhatsappButton from '@/components/SendWhatsappButton.svelte';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
 
     let { patient } = $props();
 
@@ -40,6 +40,30 @@
     let isPdfViewerOpen = $state(false);
     let pdfViewerUrl = $state('');
     let pdfViewerTitle = $state('');
+    let viewingDocId = $state<number | null>(null);
+
+    // Formulario para Subir un Documento Firmado (reemplazo de borrador)
+    const uploadSignedForm = useForm({
+        file: null as File | null
+    });
+    let documentToUploadId = $state<number | null>(null);
+
+    function handleSignedFileChange(e: Event) {
+        const target = e.target as HTMLInputElement;
+        if (target.files && target.files.length > 0 && documentToUploadId) {
+            uploadSignedForm.file = target.files[0];
+            uploadSignedForm.post(`/documents/${documentToUploadId}/upload-signed`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    uploadSignedForm.reset();
+                    uploadSignedForm.file = null;
+                    documentToUploadId = null;
+                    if (target) target.value = '';
+                    Toast.success('Éxito', 'Documento firmado subido correctamente');
+                }
+            });
+        }
+    }
 
     function handleFileChange(e: Event) {
         const target = e.target as HTMLInputElement;
@@ -60,18 +84,19 @@
                 uploadForm.file = null;
                 const fileInput = document.getElementById('file-upload') as HTMLInputElement;
                 if (fileInput) fileInput.value = '';
-                toast.success('Documento subido correctamente');
+                Toast.success('Éxito', 'Documento subido correctamente');
             }
         });
     }
 
     function viewPdf(doc: any) {
+        viewingDocId = doc.id;
         if (doc.status === 'Borrador') {
             pdfViewerUrl = `/pacientes/${patient.id}/pdf/contrato?plantilla=${doc.type}`;
         } else if (doc.media && doc.media.length > 0) {
             pdfViewerUrl = doc.media[0].original_url;
         } else {
-            toast.error('No se pudo encontrar el archivo del documento');
+            Toast.error('Error', 'No se pudo encontrar el archivo del documento');
             return;
         }
         pdfViewerTitle = doc.name;
@@ -81,7 +106,7 @@
     function generarContrato(e: Event) {
         e.preventDefault();
         if (!generarForm.plantilla) {
-            toast.error('Selecciona una plantilla');
+            Toast.error('Error', 'Selecciona una plantilla');
             return;
         }
         
@@ -89,19 +114,48 @@
             preserveScroll: true,
             onSuccess: () => {
                 isGenerarModalOpen = false;
-                toast.success('Borrador generado. Ahora puede visualizarlo o firmarlo.');
+                Toast.success('Éxito', 'Borrador generado. Ahora puede visualizarlo o firmarlo.');
                 generarForm.reset();
             }
         });
     }
 
     function deleteDocument(docId: number) {
-        if (confirm('¿Estás seguro de eliminar este documento? Esta acción no se puede deshacer.')) {
-            router.delete(`/documents/${docId}`, {
-                preserveScroll: true,
-                onSuccess: () => toast.success('Documento eliminado correctamente')
-            });
-        }
+        Toast.confirm(
+            '¿Estás seguro de eliminar este documento?', 
+            () => {
+                router.delete(`/documents/${docId}`, {
+                    preserveScroll: true,
+                    onSuccess: () => Toast.success('Éxito', 'Documento eliminado correctamente')
+                });
+            },
+            {
+                title: 'Eliminar Documento',
+                confirmText: 'Eliminar',
+                type: 'destructive',
+                message: 'Esta acción no se puede deshacer.'
+            }
+        );
+    }
+
+    function handlePrint() {
+        if (!viewingDocId) return;
+        Toast.confirm(
+            'Si el paciente firmará el documento físicamente, ¿Deseas subir el documento escaneado ahora?',
+            () => {
+                isPdfViewerOpen = false;
+                documentToUploadId = viewingDocId;
+                setTimeout(() => {
+                    const fileInput = document.getElementById('file-upload-signed') as HTMLInputElement;
+                    if (fileInput) fileInput.click();
+                }, 300);
+            },
+            {
+                title: 'Subir Documento Firmado',
+                confirmText: 'Sí, subir ahora',
+                cancelText: 'No, más tarde'
+            }
+        );
     }
 
     function openSignModal(doc: any) {
@@ -119,12 +173,12 @@
         }, {
             preserveScroll: true,
             onSuccess: () => {
-                toast.success('Documento firmado y guardado correctamente', { id: 'sign-toast' });
+                Toast.success('Éxito', 'Documento firmado y guardado correctamente', { id: 'sign-toast' });
                 isSignatureModalOpen = false;
                 documentToSign = null;
             },
             onError: () => {
-                toast.error('Ocurrió un error al firmar el documento', { id: 'sign-toast' });
+                Toast.error('Error', 'Ocurrió un error al firmar el documento', { id: 'sign-toast' });
             }
         });
     }
@@ -192,10 +246,11 @@
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-muted-foreground uppercase bg-slate-50 border-b">
                             <tr>
-                                <th class="px-6 py-4 font-medium">Fecha Creación</th>
+                                <th class="px-6 py-4 font-medium">Documento</th>
                                 <th class="px-6 py-4 font-medium">Plantilla</th>
                                 <th class="px-6 py-4 font-medium">Estado</th>
-                                <th class="px-6 py-4 font-medium text-center">Acciones</th>
+                                <th class="px-6 py-4 font-medium">Fecha Creación</th>
+                                <th class="px-6 py-4 font-medium text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y">
@@ -229,8 +284,11 @@
                                     <td class="px-4 py-3 text-right">
                                         <div class="flex items-center justify-end gap-1">
                                             {#if doc.status === 'Borrador'}
-                                                <Button variant="ghost" size="icon" class="text-emerald-600 hover:bg-emerald-50" onclick={() => openSignModal(doc)} title="Firmar Documento">
+                                                <Button variant="ghost" size="icon" class="text-emerald-600 hover:bg-emerald-50" onclick={() => openSignModal(doc)} title="Firmar en Sistema">
                                                     <PenTool class="w-4 h-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" class="text-indigo-600 hover:bg-indigo-50" onclick={() => { documentToUploadId = doc.id; document.getElementById('file-upload-signed')?.click(); }} title="Subir Documento Firmado Físicamente">
+                                                    <FileUp class="w-4 h-4" />
                                                 </Button>
                                             {/if}
                                             {#if doc.status !== 'Borrador' && doc.media && doc.media.length > 0}
@@ -295,10 +353,19 @@
 </div>
 
 <!-- Modal Visor de PDF Reutilizable -->
+<input 
+    type="file" 
+    id="file-upload-signed" 
+    class="hidden" 
+    accept=".pdf,.jpg,.jpeg,.png" 
+    onchange={handleSignedFileChange} 
+/>
+
 <PdfViewerModal 
     bind:isOpen={isPdfViewerOpen} 
     url={pdfViewerUrl} 
     title={pdfViewerTitle} 
+    onPrint={handlePrint}
 />
 
 <!-- Modal para Firmar Documento -->

@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <title>@yield('title', 'Documento Legal')</title>
     <style>
+        :root {
+            --primary-color: {{ $clinica['color_primary'] ?? '#0d1b2a' }};
+            --secondary-color: {{ $clinica['color_secondary'] ?? '#64748b' }};
+        }
+        
         /* ══ SISTEMA DE DISEÑO LEGAL v3 · DentalSystem ══ */
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -58,31 +63,31 @@
         }
 
         /* ── ENCABEZADO ── */
-        .header { display: table; width: 100%; padding-bottom: 12px; margin-bottom: 20px; border-bottom: 2px solid #0d1b2a; }
+        .header { display: table; width: 100%; padding-bottom: 12px; margin-bottom: 20px; border-bottom: 2px solid var(--primary-color); }
         .header-logo { display: table-cell; width: 70px; vertical-align: middle; }
         .header-logo img { max-width: 62px; max-height: 62px; }
-        .header-logo-placeholder { width: 56px; height: 56px; background: #0d1b2a; border-radius: 4px; font-size: 18px; font-weight: bold; color: #fff; text-align: center; line-height: 56px; font-family: Arial, sans-serif; letter-spacing: -1px; }
+        .header-logo-placeholder { width: 56px; height: 56px; background: var(--primary-color); border-radius: 4px; font-size: 18px; font-weight: bold; color: #fff; text-align: center; line-height: 56px; font-family: Arial, sans-serif; letter-spacing: -1px; }
         .header-info { display: table-cell; vertical-align: middle; padding-left: 12px; }
-        .header-clinica { font-family: Arial, Helvetica, sans-serif; font-size: 14pt; font-weight: bold; color: #0d1b2a; text-transform: uppercase; letter-spacing: 1px; }
-        .header-meta { font-family: Arial, Helvetica, sans-serif; font-size: 8.5pt; color: #64748b; margin-top: 3px; }
+        .header-clinica { font-family: Arial, Helvetica, sans-serif; font-size: 14pt; font-weight: bold; color: var(--primary-color); text-transform: uppercase; letter-spacing: 1px; }
+        .header-meta { font-family: Arial, Helvetica, sans-serif; font-size: 8.5pt; color: var(--secondary-color); margin-top: 3px; }
         .header-meta span { margin-right: 14px; }
         .header-doc { display: table-cell; vertical-align: middle; text-align: right; width: 170px; }
-        .doc-type-label { font-family: Arial, sans-serif; font-size: 7.5pt; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-        .doc-badge { display: inline-block; background: #0d1b2a; color: #fff; padding: 4px 13px; border-radius: 2px; font-family: Arial, sans-serif; font-size: 9pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        .doc-type-label { font-family: Arial, sans-serif; font-size: 7.5pt; font-weight: bold; color: var(--secondary-color); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .doc-badge { display: inline-block; background: var(--primary-color); color: #fff; padding: 4px 13px; border-radius: 2px; font-family: Arial, sans-serif; font-size: 9pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
         .doc-sub { font-family: Arial, sans-serif; font-size: 8.5pt; color: #94a3b8; margin-top: 5px; }
 
         /* ── TÍTULO ── */
         .doc-title { text-align: center; margin: 18px 0 16px; padding-bottom: 12px; border-bottom: 1px solid #e8e0d0; }
-        .doc-title h1 { font-size: 13pt; font-weight: bold; color: #0d1b2a; text-transform: uppercase; letter-spacing: 1.2px; line-height: 1.35; }
-        .doc-title .subtitle { font-size: 9.5pt; color: #64748b; margin-top: 5px; font-style: italic; }
+        .doc-title h1 { font-size: 13pt; font-weight: bold; color: var(--primary-color); text-transform: uppercase; letter-spacing: 1.2px; line-height: 1.35; }
+        .doc-title .subtitle { font-size: 9.5pt; color: var(--secondary-color); margin-top: 5px; font-style: italic; }
 
         /* ── PARTES ── */
         .parties-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; border: 1px solid #e8e0d0; }
         .parties-table td { padding: 7px 12px; border: 1px solid #e8e0d0; font-size: 11pt; }
-        .parties-table .lbl { background: #f7f4ef; color: #0d1b2a; font-family: Arial, sans-serif; font-weight: bold; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.4px; width: 145px; white-space: nowrap; }
+        .parties-table .lbl { background: #f7f4ef; color: var(--primary-color); font-family: Arial, sans-serif; font-weight: bold; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.4px; width: 145px; white-space: nowrap; }
 
         /* ── CLÁUSULAS ── */
-        .clause-title { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; font-weight: bold; color: #0d1b2a; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; padding: 4px 10px; background: #f7f4ef; border-left: 3px solid #1a3a5c; }
+        .clause-title { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; font-weight: bold; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; padding: 4px 10px; background: #f7f4ef; border-left: 3px solid var(--primary-color); }
         .clause-body { font-size: 11pt; text-align: justify; color: #334155; padding: 5px 0 5px 14px; line-height: 1.55; }
 
         /* ── FIRMAS ── */
@@ -90,8 +95,8 @@
         .sig-box  { display: table-cell; width: 50%; text-align: center; padding: 0 24px; vertical-align: bottom; }
         .sig-img  { min-height: 65px; display: block; text-align: center; }
         .sig-img img { max-height: 65px; }
-        .sig-line { border-top: 1.5px solid #0d1b2a; padding-top: 7px; margin-top: 3px; }
-        .sig-name { font-family: Arial, sans-serif; font-size: 10.5pt; font-weight: bold; color: #0d1b2a; }
+        .sig-line { border-top: 1.5px solid var(--primary-color); padding-top: 7px; margin-top: 3px; }
+        .sig-name { font-family: Arial, sans-serif; font-size: 10.5pt; font-weight: bold; color: var(--primary-color); }
         .sig-role { font-family: Arial, sans-serif; font-size: 8.5pt; color: #94a3b8; margin-top: 2px; }
 
         /* ── NOTA LEGAL ── */

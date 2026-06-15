@@ -6,7 +6,7 @@
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
     import { Label } from '@/components/ui/label';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
     import { untrack } from 'svelte';
 
     let { isOpen = $bindable(false), role = null, permissions = [] } = $props();
@@ -55,7 +55,7 @@
             preserveScroll: true,
             onSuccess: () => {
                 isOpen = false;
-                toast.success(isEditMode ? 'Rol actualizado exitosamente' : 'Rol creado exitosamente');
+                Toast.success('Éxito', isEditMode ? 'Rol actualizado exitosamente' : 'Rol creado exitosamente');
                 if (!isEditMode) {
                     form.reset();
                 }

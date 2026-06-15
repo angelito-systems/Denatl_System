@@ -3,21 +3,29 @@
     import { Gift, Users, Trophy, ChevronLeft, Calendar, Play } from 'lucide-svelte';
     import AppHead from '@/components/AppHead.svelte';
     import { Button } from '@/components/ui/button';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
 
     let { raffle } = $props();
 
     function drawRaffle() {
-        if (confirm('¿Estás seguro de realizar el sorteo AHORA? Esto seleccionará a los ganadores y enviará un mensaje de WhatsApp a cada uno.')) {
-            router.post(`/raffles/${raffle.id}/draw`, {}, {
-                onSuccess: () => {
-                    toast.success('¡Sorteo finalizado con éxito!');
-                },
-                onError: (errors) => {
-                    if (errors.error) toast.error(errors.error);
-                }
-            });
-        }
+        Toast.confirm(
+            '¿Estás seguro de realizar el sorteo AHORA?',
+            () => {
+                router.post(`/raffles/${raffle.id}/draw`, {}, {
+                    onSuccess: () => {
+                        Toast.success('Éxito', '¡Sorteo finalizado con éxito!');
+                    },
+                    onError: (errors) => {
+                        if (errors.error) Toast.error('Error', errors.error);
+                    }
+                });
+            },
+            {
+                message: 'Esto seleccionará a los ganadores y enviará un mensaje de WhatsApp a cada uno.',
+                confirmText: 'Sí, Realizar Sorteo',
+                type: 'destructive'
+            }
+        );
     }
 
     function formatDate(dateString: string) {

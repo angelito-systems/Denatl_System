@@ -9,8 +9,8 @@
 {{-- ENCABEZADO --}}
 <div class="header">
     <div class="header-logo">
-        @if(!empty($clinica['logo']))
-            <img src="data:image/png;base64,{{ $clinica['logo'] }}" alt="Logo">
+        @if(!empty($clinica['logo_base64']))
+            <img src="{{ $clinica['logo_base64'] }}" alt="Logo">
         @else
             <div class="header-logo-placeholder">{{ strtoupper(substr($clinica['nombre'],0,2)) }}</div>
         @endif
@@ -55,35 +55,20 @@
         <td class="lbl">Tratamiento</td>
         <td>{{ $contrato->treatment_name }}</td>
     </tr>
+    <tr>
+        <td class="lbl">Costo Total</td>
+        <td><strong>S/ {{ number_format($contrato->total_cost, 2) }}</strong></td>
+    </tr>
+    <tr>
+        <td class="lbl">Cuota Inicial</td>
+        <td>S/ {{ $contrato->down_payment > 0 ? number_format($contrato->down_payment, 2) : '0.00' }}</td>
+    </tr>
+    <tr>
+        <td class="lbl">N° de Cuotas</td>
+        <td>{{ $contrato->installments > 0 ? $contrato->installments : '—' }}</td>
+    </tr>
     @endif
 </table>
-
-{{-- RESUMEN FINANCIERO --}}
-@if($contrato)
-<div class="fin-summary">
-    <div class="fin-cell">
-        <div class="fin-card">
-            <div class="fin-label">Costo Total del Tratamiento</div>
-            <div class="fin-value green">S/ {{ number_format($contrato->total_cost, 2) }}</div>
-            <div class="fin-sub">Importe total acordado</div>
-        </div>
-    </div>
-    <div class="fin-cell">
-        <div class="fin-card blue">
-            <div class="fin-label">Cuota Inicial</div>
-            <div class="fin-value blue">S/ {{ $contrato->down_payment > 0 ? number_format($contrato->down_payment, 2) : '0.00' }}</div>
-            <div class="fin-sub">Pago al inicio del tratamiento</div>
-        </div>
-    </div>
-    <div class="fin-cell">
-        <div class="fin-card gold">
-            <div class="fin-label">Número de Cuotas</div>
-            <div class="fin-value gold">{{ $contrato->installments > 0 ? $contrato->installments : '—' }}</div>
-            <div class="fin-sub">Cuotas mensuales</div>
-        </div>
-    </div>
-</div>
-@endif
 
 {{-- CLÁUSULAS --}}
 <div class="clause">
@@ -137,8 +122,8 @@
             @endif
         </div>
         <div class="sig-line">
-            <div class="sig-name">{{ $clinica['nombre'] }}</div>
-            <div class="sig-role">Representante Autorizado</div>
+            <div class="sig-name">{{ $clinica['representante'] ?: $clinica['nombre'] }}</div>
+            <div class="sig-role">Representante Legal{{ $clinica['representante_dni'] ? ' / DNI: ' . $clinica['representante_dni'] : '' }}</div>
         </div>
     </div>
     <div class="sig-box">

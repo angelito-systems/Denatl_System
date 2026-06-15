@@ -46,7 +46,15 @@ class PaymentController extends Controller
      */
     public function store(StorePaymentRequest $request, SunatService $sunatService, PdfGeneratorService $pdfService, \App\Services\WhatsAppService $whatsappService)
     {
-        $payment = Payment::create($request->validated());
+        $validatedData = $request->validated();
+        $isSunatActive = \App\Models\Configuration::get('sunat_active') === '1';
+
+        // If SUNAT is inactive, force the receipt type to Ticket regardless of the input
+        if (!$isSunatActive && in_array($validatedData['receipt_type'] ?? '', ['Boleta', 'Factura'])) {
+            $validatedData['receipt_type'] = 'Ticket';
+        }
+
+        $payment = Payment::create($validatedData);
         $payment->load(['patient', 'treatmentContract']);
 
         // Update contract balance if applicable
@@ -73,7 +81,7 @@ class PaymentController extends Controller
         }
 
         $sunatStatus = '';
-        if (in_array($payment->receipt_type, ['Boleta', 'Factura'])) {
+        if (in_array($payment->receipt_type, ['Boleta', 'Factura']) && $isSunatActive) {
             try {
                 $sunatService->emitirComprobante($payment);
                 $sunatStatus = ' y emitido a SUNAT correctamente';
@@ -160,6 +168,11 @@ class PaymentController extends Controller
 
     public function emitirSunat(Request $request, Payment $payment, SunatService $sunatService)
     {
+        $isSunatActive = \App\Models\Configuration::get('sunat_active') === '1';
+        if (!$isSunatActive) {
+            return redirect()->back()->with('error', 'El sistema está configurado para emitir solo Tickets Internos. Habilite SUNAT en Configuración primero.');
+        }
+
         try {
             // Permitir actualizar datos de facturación (RUC, Razón Social) antes de emitir
             if ($request->has('billing_document') || $request->has('billing_name')) {

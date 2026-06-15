@@ -30,7 +30,7 @@
     import { router, useForm } from '@inertiajs/svelte';
     import { index } from '@/routes/staff';
     import { Search, Plus, UserCog, Trash2, Edit, Loader2, CalendarClock } from 'lucide-svelte';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
     import ScheduleModal from '@/components/ScheduleModal.svelte';
 
     let { users, roles, filters } = $props();
@@ -61,7 +61,7 @@
 
     async function searchDni() {
         if (!userForm.dni || userForm.dni.length !== 8) {
-            toast.error('El DNI debe tener 8 dígitos');
+            Toast.error('Error', 'El DNI debe tener 8 dígitos');
             return;
         }
 
@@ -73,12 +73,12 @@
             if (data.success && data.data) {
                 userForm.first_name = data.data.nombres;
                 userForm.last_name = `${data.data.apellido_paterno} ${data.data.apellido_materno}`;
-                toast.success('Datos obtenidos correctamente');
+                Toast.success('Éxito', 'Datos obtenidos correctamente');
             } else {
-                toast.error(data.message || 'No se encontraron resultados');
+                Toast.error('Error', data.message || 'No se encontraron resultados');
             }
         } catch (e) {
-            toast.error('Error al conectar con el servicio RENIEC');
+            Toast.error('Error', 'Error al conectar con el servicio RENIEC');
         } finally {
             isSearchingDni = false;
         }
@@ -110,7 +110,7 @@
                 preserveScroll: true,
                 onSuccess: () => {
                     isUserModalOpen = false;
-                    toast.success('Usuario actualizado correctamente');
+                    Toast.success('Éxito', 'Usuario actualizado correctamente');
                 }
             });
         } else {
@@ -119,7 +119,7 @@
                 onSuccess: () => {
                     isUserModalOpen = false;
                     userForm.reset();
-                    toast.success('Usuario creado correctamente');
+                    Toast.success('Éxito', 'Usuario creado correctamente');
                 }
             });
         }
@@ -156,7 +156,7 @@
                 preserveScroll: true,
                 onSuccess: () => {
                     isDeleteModalOpen = false;
-                    toast.success('Usuario eliminado');
+                    Toast.success('Éxito', 'Usuario eliminado');
                 }
             });
         }

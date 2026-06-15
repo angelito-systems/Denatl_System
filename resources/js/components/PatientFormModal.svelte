@@ -9,7 +9,7 @@
     import { Label } from '@/components/ui/label';
     import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
     import { store, update } from '@/routes/patients';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
     import { untrack } from 'svelte';
 
     let { isOpen = $bindable(false), patient = null } = $props();
@@ -62,7 +62,7 @@
             preserveScroll: true,
             onSuccess: () => {
                 isOpen = false;
-                toast.success(isEditMode ? 'Paciente actualizado exitosamente' : 'Paciente registrado exitosamente');
+                Toast.success('Éxito', isEditMode ? 'Paciente actualizado exitosamente' : 'Paciente registrado exitosamente');
                 if (!isEditMode) {
                     form.reset();
                 }

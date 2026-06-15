@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Appointment;
 use App\Models\Conversation;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Models\TreatmentContract;
 use App\Services\PdfGeneratorService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
@@ -12,7 +14,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class MessageController extends Controller
 {
-    public function index()
+    public function index($id = null)
     {
         $conversations = Conversation::with(['patient', 'messages' => function ($q) {
             $q->orderBy('created_at', 'asc');
@@ -20,6 +22,7 @@ class MessageController extends Controller
 
         return inertia('Messages/Index', [
             'conversations' => $conversations,
+            'selectedId' => $id ? (int) $id : null,
         ]);
     }
 
@@ -27,10 +30,22 @@ class MessageController extends Controller
     {
         $validated = $request->validate([
             'phone' => 'required|string',
-            'message' => 'required|string',
+            'message' => 'nullable|string',
+            'attachment' => 'nullable|file|max:5120', // Max 5MB
         ]);
 
-        $success = $whatsapp->enviarMensaje($validated['phone'], $validated['message']);
+        $message = $validated['message'] ?? '';
+
+        if ($request->hasFile('attachment')) {
+            $file = $request->file('attachment');
+            $base64 = base64_encode(file_get_contents($file->getRealPath()));
+            $mime = $file->getMimeType();
+            $fileName = $file->getClientOriginalName();
+
+            $success = $whatsapp->enviarMediaBase64($validated['phone'], $base64, $mime, $fileName, $message);
+        } else {
+            $success = $whatsapp->enviarMensaje($validated['phone'], $message);
+        }
 
         if ($success) {
             return redirect()->back()->with('success', 'Mensaje enviado exitosamente');
@@ -64,6 +79,8 @@ class MessageController extends Controller
             'phone' => 'required|string',
             'media_id' => 'nullable|integer|exists:media,id',
             'payment_id' => 'nullable|integer|exists:payments,id',
+            'contract_id' => 'nullable|integer|exists:treatment_contracts,id',
+            'appointment_id' => 'nullable|integer|exists:appointments,id',
             'patient_id' => 'nullable|integer|exists:patients,id',
             'type' => 'nullable|string',
             'caption' => 'nullable|string',
@@ -82,6 +99,16 @@ class MessageController extends Controller
             $pdf = $pdfService->generarComprobante($payment);
             $base64 = $pdf->base64();
             $fileName = "comprobante_{$payment->id}.pdf";
+        } elseif (! empty($validated['contract_id'])) {
+            $contract = TreatmentContract::with('patient')->findOrFail($validated['contract_id']);
+            $pdf = $pdfService->generarPlantilla($contract->patient, 'contrato');
+            $base64 = $pdf->base64();
+            $fileName = "contrato_{$contract->id}.pdf";
+        } elseif (! empty($validated['appointment_id'])) {
+            $cita = Appointment::with('patient')->findOrFail($validated['appointment_id']);
+            $whatsapp->enviarRecordatorioCita($cita);
+
+            return redirect()->back()->with('success', 'Recordatorio de cita enviado exitosamente por WhatsApp.');
         } elseif (! empty($validated['patient_id'])) {
             $patient = Patient::findOrFail($validated['patient_id']);
             if ($validated['type'] === 'historia') {
@@ -93,6 +120,28 @@ class MessageController extends Controller
                 $pdf = $pdfService->generarPlantilla($patient, $plantilla);
                 $base64 = $pdf->base64();
                 $fileName = "{$plantilla}_{$patient->id}.pdf";
+            } elseif ($validated['type'] === 'ultimo_comprobante') {
+                $payment = Payment::with('patient')->where('patient_id', $patient->id)->orderBy('id', 'desc')->first();
+                if (! $payment) {
+                    return redirect()->back()->with('error', 'El paciente no tiene comprobantes recientes.');
+                }
+                $pdf = $pdfService->generarComprobante($payment);
+                $base64 = $pdf->base64();
+                $fileName = "comprobante_{$payment->id}.pdf";
+                if (empty($caption)) {
+                    $caption = 'Aquí tienes tu último comprobante de pago.';
+                }
+            } elseif ($validated['type'] === 'proxima_cita') {
+                $cita = Appointment::where('patient_id', $patient->id)
+                    ->whereDate('date', '>=', now())
+                    ->orderBy('date')->orderBy('start_time')
+                    ->first();
+                if (! $cita) {
+                    return redirect()->back()->with('error', 'El paciente no tiene próximas citas programadas.');
+                }
+                $whatsapp->enviarRecordatorioCita($cita);
+
+                return redirect()->back()->with('success', 'Recordatorio de cita enviado exitosamente por WhatsApp.');
             } else {
                 return redirect()->back()->with('error', 'Tipo de documento no soportado.');
             }

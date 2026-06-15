@@ -5,8 +5,8 @@
 {{-- ENCABEZADO --}}
 <div class="header">
     <div class="header-logo">
-        @if(!empty($clinica['logo']))
-            <img src="data:image/png;base64,{{ $clinica['logo'] }}" alt="Logo">
+        @if(!empty($clinica['logo_base64']))
+            <img src="{{ $clinica['logo_base64'] }}" alt="Logo">
         @else
             <div class="header-logo-placeholder">{{ strtoupper(substr($clinica['nombre'],0,2)) }}</div>
         @endif
@@ -107,8 +107,8 @@
             @endif
         </div>
         <div class="sig-line">
-            <div class="sig-name">{{ $clinica['nombre'] }}</div>
-            <div class="sig-role">Representante Autorizado</div>
+            <div class="sig-name">{{ $clinica['representante'] ?: $clinica['nombre'] }}</div>
+            <div class="sig-role">Representante Legal{{ $clinica['representante_dni'] ? ' / DNI: ' . $clinica['representante_dni'] : '' }}</div>
         </div>
     </div>
     <div class="sig-box">

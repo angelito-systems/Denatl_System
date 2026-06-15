@@ -26,8 +26,9 @@
         TableRow,
     } from '@/components/ui/table';
     import PatientFormModal from '@/components/PatientFormModal.svelte';
+    import { Toast } from '@/lib/utils/toast';
 
-    let { patients, filters } = $props();
+    let { patients, pagination, filters } = $props();
 
     let searchQuery = $state(filters?.search || '');
     let searchTimeout: ReturnType<typeof setTimeout>;
@@ -61,12 +62,19 @@
     }
 
     function deletePatient() {
-        if (
-            selectedPatientId &&
-            confirm('¿Estás seguro de eliminar este paciente?')
-        ) {
-            router.delete(`/patients/${selectedPatientId}`);
-            selectedPatientId = null;
+        if (selectedPatientId) {
+            Toast.confirm(
+                '¿Estás seguro de eliminar este paciente?',
+                () => {
+                    router.delete(`/patients/${selectedPatientId}`);
+                    selectedPatientId = null;
+                },
+                {
+                    title: 'Eliminar Paciente',
+                    type: 'destructive',
+                    confirmText: 'Eliminar'
+                }
+            );
         }
     }
 

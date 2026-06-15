@@ -7,7 +7,7 @@
     import { Input } from '@/components/ui/input';
     import { Label } from '@/components/ui/label';
     import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
     import { untrack } from 'svelte';
 
     let { isOpen = $bindable(false), raffle = null } = $props();
@@ -80,7 +80,7 @@
             preserveScroll: true,
             onSuccess: () => {
                 isOpen = false;
-                toast.success(isEditMode ? 'Sorteo actualizado' : 'Sorteo creado');
+                Toast.success('Éxito', isEditMode ? 'Sorteo actualizado' : 'Sorteo creado');
                 if (!isEditMode) {
                     form.reset();
                 }

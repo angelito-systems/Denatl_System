@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessWhatsappMessage;
+use App\Models\Configuration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -11,6 +12,14 @@ class EvolutionWebhookController extends Controller
 {
     public function handle(Request $request, $eventName = null)
     {
+        // Validar token secreto en la URL (ej. ?token=SECRETO)
+        $expectedToken = env('EVOLUTION_WEBHOOK_TOKEN', 'dental123'); // Fallback para compatibilidad
+        if ($request->query('token') !== $expectedToken) {
+            Log::warning('Intento de acceso a webhook sin token válido', ['ip' => $request->ip()]);
+
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
         // Evolution API envía un objeto con event y data
         $payload = $request->all();
 
@@ -21,6 +30,15 @@ class EvolutionWebhookController extends Controller
         ])->info('NUEVO WEBHOOK RECIBIDO:', $payload);
 
         $event = $payload['event'] ?? $eventName ?? '';
+
+        // Validación de estructura y origen
+        $instance = $payload['instance'] ?? '';
+        $expectedInstance = Configuration::get('whatsapp_instance', 'clinica-dental');
+        if ($instance !== $expectedInstance) {
+            Log::warning("Webhook recibido de instancia no reconocida: {$instance}");
+
+            return response()->json(['error' => 'Instancia no reconocida'], 400);
+        }
 
         if ($event === 'messages.upsert' || $event === 'MESSAGES_UPSERT') {
             $data = $payload['data'] ?? [];

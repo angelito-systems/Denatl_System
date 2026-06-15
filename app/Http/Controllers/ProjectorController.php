@@ -37,6 +37,7 @@ class ProjectorController extends Controller
                   ->orWhere('status', 'confirmed');
             })
             ->whereNotIn('projector_status', ['calling', 'in_progress', 'finished'])
+            ->whereTime('start_time', '>=', now()->subHours(1)->format('H:i:s'))
             ->orderBy('start_time', 'asc')
             ->take(5)
             ->get();
@@ -86,6 +87,7 @@ class ProjectorController extends Controller
                   ->orWhere('status', 'confirmed');
             })
             ->whereNotIn('projector_status', ['calling', 'in_progress', 'finished'])
+            ->whereTime('start_time', '>=', now()->subHours(1)->format('H:i:s'))
             ->orderBy('start_time', 'asc')
             ->first();
 

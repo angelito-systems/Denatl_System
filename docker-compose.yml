@@ -1,0 +1,129 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dental-system-app
+    container_name: dental_system_app
+    restart: always
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_HOST=mysql
+      - DB_DATABASE=${DB_DATABASE:-system_dental}
+      - DB_USERNAME=${DB_USERNAME:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
+      - REDIS_HOST=redis
+      - CACHE_STORE=redis
+      - SESSION_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      # Rutas internas para Laravel PDF (Spatie Browsershot)
+      - BROWSERSHOT_NODE_BIN=/usr/bin/node
+      - BROWSERSHOT_NPM_BIN=/usr/bin/npm
+      - BROWSERSHOT_CHROME_PATH=/usr/bin/chromium
+      - BROWSERSHOT_NODE_MODULES_PATH=/var/www/html/node_modules
+    volumes:
+      - ./.env:/var/www/html/.env
+      - ./storage:/var/www/html/storage
+      - public_data:/var/www/html/public
+      - evolution_store:/var/www/html/storage/app/evolution
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - dental_network
+    healthcheck:
+      test: ["CMD", "php-fpm", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  nginx:
+    image: nginx:alpine
+    container_name: dental_system_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - public_data:/var/www/html/public:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - dental_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mysql:
+    image: mysql:8.0
+    container_name: dental_system_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_DATABASE:-system_dental}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - dental_network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: dental_system_redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - dental_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  evolution-api:
+    image: atendai/evolution-api:v2.2.1
+    container_name: dental_system_evolution
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_URL=http://${SERVER_IP:-127.0.0.1}:8080
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:-429683C4C977415CAAFCCE10F7D57E11}
+      - DATABASE_PROVIDER=mysql
+      - DATABASE_CONNECTION_URI=mysql://${DB_USERNAME:-root}:${DB_PASSWORD:-root}@mysql:3306/${DB_DATABASE:-system_dental}
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution
+    volumes:
+      - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
+    networks:
+      - dental_network
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+  redis_data:
+  evolution_instances:
+  evolution_store:
+  public_data:
+
+networks:
+  dental_network:
+    driver: bridge

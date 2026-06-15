@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
 use App\Models\Patient;
+use App\Models\Treatment;
 use App\Services\PdfGeneratorService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class PatientController extends Controller
@@ -16,6 +18,7 @@ class PatientController extends Controller
      */
     public function index(Request $request)
     {
+        Gate::authorize('ver_pacientes');
         $query = Patient::query();
         if ($request->has('search') && $request->input('search') !== '') {
             $search = $request->input('search');
@@ -37,6 +40,7 @@ class PatientController extends Controller
      */
     public function store(StorePatientRequest $request)
     {
+        Gate::authorize('crear_pacientes');
         $patient = Patient::create($request->validated());
 
         return redirect()->back()->with('success', 'Patient created successfully.');
@@ -47,6 +51,7 @@ class PatientController extends Controller
      */
     public function show(Patient $patient)
     {
+        Gate::authorize('ver_pacientes');
         $patient->load(['documents.media', 'evolutions.dentist', 'evolutions.appointment', 'appointments', 'treatmentContracts.document', 'treatmentContracts.payments']);
 
         $latestOdontogram = $patient->evolutions()
@@ -54,7 +59,7 @@ class PatientController extends Controller
             ->latest()
             ->first();
 
-        $treatments = \App\Models\Treatment::orderBy('name')->get();
+        $treatments = Treatment::orderBy('name')->get();
 
         return Inertia::render('Patients/Show', [
             'patient' => $patient,
@@ -68,6 +73,7 @@ class PatientController extends Controller
      */
     public function update(UpdatePatientRequest $request, Patient $patient)
     {
+        Gate::authorize('editar_pacientes');
         $patient->update($request->validated());
 
         return redirect()->back()->with('success', 'Patient updated successfully.');
@@ -78,6 +84,7 @@ class PatientController extends Controller
      */
     public function destroy(Patient $patient)
     {
+        Gate::authorize('eliminar_pacientes');
         $patient->delete();
 
         return redirect()->back()->with('success', 'Paciente eliminado exitosamente.');
@@ -85,11 +92,14 @@ class PatientController extends Controller
 
     public function downloadHistoria(Patient $patient, PdfGeneratorService $pdfService)
     {
+        Gate::authorize('ver_pacientes');
+
         return $pdfService->generarHistoriaClinica($patient)->download();
     }
 
     public function downloadContrato(Request $request, Patient $patient, PdfGeneratorService $pdfService)
     {
+        Gate::authorize('ver_contratos');
         $plantilla = $request->input('plantilla', 'contrato');
 
         return $pdfService->generarPlantilla($patient, $plantilla)->inline("{$plantilla}_{$patient->id}.pdf");
@@ -97,11 +107,33 @@ class PatientController extends Controller
 
     public function downloadOdontograma(Request $request, Patient $patient, PdfGeneratorService $pdfService)
     {
+        Gate::authorize('ver_pacientes');
         $request->validate(['html' => 'required|string']);
         $pdf = $pdfService->generarOdontograma($patient, $request->html);
 
         return response()->json([
             'base64' => $pdf->base64(),
         ]);
+    }
+
+    public function payments(Patient $patient)
+    {
+        return response()->json(
+            $patient->payments()->with('treatmentContract:id,treatment_name')->orderBy('created_at', 'desc')->get()
+        );
+    }
+
+    public function contracts(Patient $patient)
+    {
+        return response()->json(
+            $patient->treatmentContracts()->orderBy('created_at', 'desc')->get()
+        );
+    }
+
+    public function appointments(Patient $patient)
+    {
+        return response()->json(
+            $patient->appointments()->orderBy('date', 'desc')->orderBy('start_time', 'desc')->get()
+        );
     }
 }

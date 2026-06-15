@@ -15,7 +15,7 @@
     import { Input } from '@/components/ui/input';
     import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
     import { Label } from '@/components/ui/label';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
     import {
         Table,
         TableBody,
@@ -43,12 +43,14 @@
 
     // Payment Form Modal State
     let isPaymentModalOpen = $state(false);
+    let sunatActive = $derived($page.props.sunatConfig?.active ?? false);
+
     const paymentForm = useForm({
         patient_id: '',
         treatment_contract_id: '',
         amount: '',
         payment_method: 'Efectivo',
-        receipt_type: 'Boleta',
+        receipt_type: ($page.props.sunatConfig?.active ?? false) ? 'Boleta' : 'Ticket',
         status: 'Pagado',
         notes: ''
     });
@@ -129,7 +131,7 @@
         try {
             base64 = await fetchPdfBase64(paymentId);
         } catch (e) {
-            toast.error('Error al generar el PDF del comprobante.');
+            Toast.error('Error', 'Error al generar el PDF del comprobante.');
             return;
         }
 
@@ -146,16 +148,16 @@
         try {
             const printers = await QZTrayService.getPrinters();
             if (printers.length === 0) {
-                toast.warning('PDF abierto. No se encontraron impresoras para imprimir.');
+                Toast.info('Atención', 'PDF abierto. No se encontraron impresoras para imprimir.');
                 return;
             }
             const printer = printers[0];
-            toast.info('Enviando ticket a la impresora...');
+            Toast.info('Información', 'Enviando ticket a la impresora...');
             await QZTrayService.imprimirPdfBase64(printer, base64);
-            toast.success('Ticket enviado a la impresora exitosamente.');
+            Toast.success('Éxito', 'Ticket enviado a la impresora exitosamente.');
         } catch (e) {
             console.error(e);
-            toast.warning('PDF mostrado. QZ Tray no pudo imprimir automáticamente.');
+            Toast.info('Atención', 'PDF mostrado. QZ Tray no pudo imprimir automáticamente.');
         }
     }
 
@@ -188,10 +190,10 @@
             preserveScroll: true,
             onSuccess: () => {
                 isSunatModalOpen = false;
-                toast.success('Comprobante emitido correctamente a SUNAT.', { id: 'sunat-toast' });
+                Toast.success('Éxito', 'Comprobante emitido correctamente a SUNAT.', { id: 'sunat-toast' });
             },
             onError: (errors) => {
-                toast.error('Error al emitir a SUNAT. Revisa los datos o la configuración.', { id: 'sunat-toast' });
+                Toast.error('Error', 'Error al emitir a SUNAT. Revisa los datos o la configuración.', { id: 'sunat-toast' });
             }
         });
     }
@@ -214,7 +216,7 @@
 
     function sendWhatsApp() {
         if (!waPhone) {
-            toast.error('Debes ingresar un número de teléfono');
+            Toast.error('Error', 'Debes ingresar un número de teléfono');
             return;
         }
         isSendingWa = true;
@@ -227,11 +229,11 @@
             onSuccess: () => {
                 isSendingWa = false;
                 isWhatsAppModalOpen = false;
-                toast.success('Ticket enviado por WhatsApp');
+                Toast.success('Éxito', 'Ticket enviado por WhatsApp');
             },
             onError: () => {
                 isSendingWa = false;
-                toast.error('Error al enviar el ticket por WhatsApp');
+                Toast.error('Error', 'Error al enviar el ticket por WhatsApp');
             }
         });
     }
@@ -324,7 +326,7 @@
                                             <a href={`/payments/${payment.id}/sunat/download/cdr`} target="_blank" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Descargar CDR">
                                                 <Download class="h-4 w-4" />
                                             </a>
-                                        {:else}
+                                        {:else if sunatActive}
                                             <Button variant="ghost" size="icon" class="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50" onclick={() => openSunatModal(payment)} title="Emitir a SUNAT">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                                             </Button>
@@ -490,8 +492,10 @@
                         <Select bind:value={paymentForm.receipt_type} type="single">
                             <SelectTrigger class="h-11 rounded-xl">{paymentForm.receipt_type}</SelectTrigger>
                             <SelectContent class="rounded-xl">
-                                <SelectItem value="Boleta" class="rounded-lg">Boleta</SelectItem>
-                                <SelectItem value="Factura" class="rounded-lg">Factura</SelectItem>
+                                {#if sunatActive}
+                                    <SelectItem value="Boleta" class="rounded-lg">Boleta</SelectItem>
+                                    <SelectItem value="Factura" class="rounded-lg">Factura</SelectItem>
+                                {/if}
                                 <SelectItem value="Ticket" class="rounded-lg">Ticket (Interno)</SelectItem>
                             </SelectContent>
                         </Select>

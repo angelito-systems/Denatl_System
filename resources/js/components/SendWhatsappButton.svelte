@@ -2,7 +2,7 @@
     import { useForm } from '@inertiajs/svelte';
     import { Button } from '@/components/ui/button';
     import { Send, Loader2 } from 'lucide-svelte';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
 
     let { 
         phone, 
@@ -29,17 +29,17 @@
 
     function sendDocument() {
         if (!phone) {
-            toast.error('El paciente no tiene un número de teléfono registrado.');
+            Toast.error('Error', 'El paciente no tiene un número de teléfono registrado.');
             return;
         }
 
         form.post('/whatsapp/send-document', {
             preserveScroll: true,
             onSuccess: () => {
-                toast.success('Documento enviado exitosamente por WhatsApp.');
+                Toast.success('Éxito', 'Documento enviado exitosamente por WhatsApp.');
             },
             onError: () => {
-                toast.error('Ocurrió un error al enviar el documento.');
+                Toast.error('Error', 'Ocurrió un error al enviar el documento.');
             }
         });
     }

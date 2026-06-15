@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Configuration;
 use App\Models\Payment;
+use App\Models\TreatmentContract;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -89,8 +90,13 @@ class SunatService
     {
         $isFactura = $payment->receipt_type === 'Factura';
         $tipoDoc = $isFactura ? '01' : '03';
-        $serie = $isFactura ? 'F001' : 'B001';
-        $correlativo = str_pad($payment->id, 8, '0', STR_PAD_LEFT);
+        $serie = $payment->sunat_serie ?: ($isFactura ? 'F001' : 'B001');
+
+        if ($payment->sunat_correlativo) {
+            $correlativo = $payment->sunat_correlativo;
+        } else {
+            $correlativo = $this->getNextCorrelativo($serie);
+        }
 
         $client = $this->buildClient($payment, $isFactura);
 
@@ -153,8 +159,13 @@ class SunatService
         string $descMotivo = 'ANULACIÓN DE OPERACIÓN'
     ): Note {
         $isFactura = str_starts_with($serieRef, 'F');
-        $serie = $isFactura ? 'FC01' : 'BC01';
-        $correlativo = str_pad($payment->id, 8, '0', STR_PAD_LEFT);
+        $serie = $payment->sunat_serie ?: ($isFactura ? 'FC01' : 'BC01');
+
+        if ($payment->sunat_correlativo) {
+            $correlativo = $payment->sunat_correlativo;
+        } else {
+            $correlativo = $this->getNextCorrelativo($serie);
+        }
 
         $client = $this->buildClient($payment, $isFactura);
 
@@ -327,9 +338,9 @@ class SunatService
 
         $extras = [];
         if ($payment->treatment_contract_id) {
-            $contract = \App\Models\TreatmentContract::find($payment->treatment_contract_id);
+            $contract = TreatmentContract::find($payment->treatment_contract_id);
             if ($contract) {
-                $extras[] = ['name' => 'Saldo Pendiente', 'value' => 'S/ ' . number_format($contract->balance_due, 2)];
+                $extras[] = ['name' => 'Saldo Pendiente', 'value' => 'S/ '.number_format($contract->balance_due, 2)];
                 $extras[] = ['name' => 'Tratamiento', 'value' => $contract->treatment_name];
             }
         }
@@ -476,5 +487,25 @@ class SunatService
         [$entero, $decimales] = explode('.', number_format($monto, 2, '.', ''));
 
         return "SON {$entero} CON {$decimales}/100 SOLES";
+    }
+
+    /**
+     * Obtiene el próximo correlativo disponible para una serie, basándose en
+     * el máximo existente en BD o la configuración del usuario.
+     */
+    private function getNextCorrelativo(string $serie): string
+    {
+        $maxDb = Payment::where('sunat_serie', $serie)->max('sunat_correlativo');
+        $maxDbInt = $maxDb ? (int) $maxDb : 0;
+
+        $configVal = Configuration::get("correlativo_{$serie}", 1);
+        $configInt = (int) $configVal;
+
+        $next = max($maxDbInt + 1, $configInt);
+
+        // Actualizamos la configuración para que muestre el próximo número correctamente
+        Configuration::set("correlativo_{$serie}", $next + 1);
+
+        return str_pad((string) $next, 8, '0', STR_PAD_LEFT);
     }
 }

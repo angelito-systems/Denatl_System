@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -17,10 +16,13 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RolesAndPermissionsSeeder::class,
-            PatientSeeder::class,
-            AppointmentSeeder::class,
-            TreatmentSeeder::class,
-            PaymentSeeder::class,
+            ImageCategorySeeder::class,
+            // Las siguientes clases generan datos falsos usando Faker.
+            // En el entorno de produccion no queremos pacientes ni pagos falsos.
+            // PatientSeeder::class,
+            // AppointmentSeeder::class,
+            // TreatmentSeeder::class,
+            // PaymentSeeder::class,
         ]);
     }
 }

@@ -48,6 +48,7 @@
         "canvas-confetti": "^1.9.4",
         "chart.js": "^4.5.1",
         "clsx": "^2.1.1",
+        "emoji-picker-element": "^1.29.1",
         "laravel-vite-plugin": "^3.0.0",
         "lucide-svelte": "^0.468.0",
         "puppeteer": "^25.1.0",

@@ -4,8 +4,8 @@
 @section('content')
 <div class="header">
     <div class="header-logo">
-        @if(!empty($clinica['logo']))
-            <img src="data:image/png;base64,{{ $clinica['logo'] }}" alt="Logo">
+        @if(!empty($clinica['logo_base64']))
+            <img src="{{ $clinica['logo_base64'] }}" alt="Logo">
         @endif
     </div>
     <div class="header-info">

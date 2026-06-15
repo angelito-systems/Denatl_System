@@ -5,8 +5,8 @@
 {{-- ENCABEZADO --}}
 <div class="header">
     <div class="header-logo">
-        @if(!empty($clinica['logo']))
-            <img src="data:image/png;base64,{{ $clinica['logo'] }}" alt="Logo">
+        @if(!empty($clinica['logo_base64']))
+            <img src="{{ $clinica['logo_base64'] }}" alt="Logo">
         @else
             <div class="header-logo-placeholder">{{ strtoupper(substr($clinica['nombre'], 0, 2)) }}</div>
         @endif
@@ -56,6 +56,22 @@
         <th>Correo Electrónico</th>
         <td>{{ $paciente->email ?? '—' }}</td>
     </tr>
+    <tr>
+        <th>Tipo de Sangre</th>
+        <td>{{ $paciente->blood_type ?? '—' }}</td>
+        <th>Contacto Emergencia</th>
+        <td>{{ $paciente->emergency_name ? $paciente->emergency_name . ' (' . $paciente->emergency_phone . ')' : '—' }}</td>
+    </tr>
+    @if(!empty($paciente->allergies) || !empty($paciente->medical_notes))
+    <tr>
+        <th>Alergias</th>
+        <td colspan="3">{{ $paciente->allergies ?? 'Ninguna' }}</td>
+    </tr>
+    <tr>
+        <th>Notas Médicas</th>
+        <td colspan="3">{{ $paciente->medical_notes ?? '—' }}</td>
+    </tr>
+    @endif
     @if(!empty($paciente->address))
     <tr>
         <th>Dirección</th>
@@ -121,8 +137,9 @@
             <th style="width:75px">Fecha</th>
             <th>Concepto</th>
             <th style="width:75px">Tipo</th>
-            <th style="width:100px">Comprobante</th>
-            <th class="right" style="width:90px">Importe (S/)</th>
+            <th style="width:90px">Método</th>
+            <th style="width:90px">Comprobante</th>
+            <th class="right" style="width:80px">Importe (S/)</th>
         </tr>
     </thead>
     <tbody>
@@ -133,6 +150,7 @@
                 <td>{{ $p->created_at->format('d/m/Y') }}</td>
                 <td>{{ $p->notes ?? 'Pago de tratamiento' }}</td>
                 <td>{{ $p->receipt_type ?? '—' }}</td>
+                <td>{{ $p->payment_method ?? '—' }}</td>
                 <td>{{ $p->sunat_serie ? $p->sunat_serie.'-'.$p->sunat_correlativo : '—' }}</td>
                 <td class="right">{{ number_format($p->amount, 2) }}</td>
             </tr>
@@ -140,7 +158,7 @@
     </tbody>
     <tfoot>
         <tr>
-            <td colspan="4" style="text-align:left;font-family:Arial,sans-serif;font-size:9.5pt;color:#475569;font-weight:normal;">Total pagado en el período</td>
+            <td colspan="5" style="text-align:left;font-family:Arial,sans-serif;font-size:9.5pt;color:#475569;font-weight:normal;">Total pagado en el período</td>
             <td class="text-right color-green fw-bold">S/ {{ number_format($totalPagos, 2) }}</td>
         </tr>
     </tfoot>

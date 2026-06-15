@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Configuration;
 use App\Models\Patient;
 use App\Models\Payment;
+use Illuminate\Support\Facades\Storage;
 use Spatie\LaravelPdf\Facades\Pdf;
 
 class PdfGeneratorService
@@ -13,11 +14,24 @@ class PdfGeneratorService
 
     public function __construct()
     {
+        $logoPath = Configuration::get('logo_path');
+        $logoBase64 = null;
+        if ($logoPath && Storage::disk('public')->exists($logoPath)) {
+            $mime = Storage::disk('public')->mimeType($logoPath);
+            $content = base64_encode(Storage::disk('public')->get($logoPath));
+            $logoBase64 = "data:{$mime};base64,{$content}";
+        }
+
         $this->clinica = [
             'nombre' => Configuration::get('clinica_nombre', 'Clínica Dental System'),
             'ruc' => Configuration::get('clinica_ruc', ''),
             'telefono' => Configuration::get('clinica_telefono', ''),
             'direccion' => Configuration::get('clinica_direccion', ''),
+            'logo_base64' => $logoBase64,
+            'color_primary' => Configuration::get('pdf_color_primary', '#0d1b2a'),
+            'color_secondary' => Configuration::get('pdf_color_secondary', '#64748b'),
+            'representante' => Configuration::get('representante_legal', ''),
+            'representante_dni' => Configuration::get('representante_dni', ''),
         ];
     }
 

@@ -17,7 +17,7 @@
         WifiOff,
         QrCode,
     } from 'lucide-svelte';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
     import qz from 'qz-tray';
 
     // 2. Componentes locales y utilidades
@@ -42,6 +42,8 @@
         clinica_ruc: configs.clinica_ruc || '',
         clinica_telefono: configs.clinica_telefono || '',
         clinica_direccion: configs.clinica_direccion || '',
+        representante_legal: configs.representante_legal || '',
+        representante_dni: configs.representante_dni || '',
         ticket_pie: configs.ticket_pie || '¡Gracias por su preferencia!',
         impresora_termica: configs.impresora_termica || '',
         apis_peru_url: configs.apis_peru_url || 'https://dniruc.apisperu.com',
@@ -57,6 +59,11 @@
         sunat_sol_pass: configs.sunat_sol_pass || '',
         sunat_cert_pem: configs.sunat_cert_pem || '',
         sunat_environment: configs.sunat_environment || 'demo',
+        sunat_active: configs.sunat_active || '0',
+        pdf_color_primary: configs.pdf_color_primary || '#0d1b2a',
+        pdf_color_secondary: configs.pdf_color_secondary || '#64748b',
+        correlativo_F001: configs.correlativo_F001 || '',
+        correlativo_B001: configs.correlativo_B001 || '',
         reminder_1_value: configs.reminder_1_value || '24',
         reminder_1_unit: configs.reminder_1_unit || 'hours',
         reminder_2_value: configs.reminder_2_value || '2',
@@ -91,7 +98,7 @@
             const file = input.files[0];
             const text = await file.text();
             (form.settings as any)[field] = text;
-            toast.success(`Archivo ${file.name} cargado correctamente.`);
+            Toast.success('Éxito', `Archivo ${file.name} cargado correctamente.`);
         }
     }
 
@@ -128,13 +135,13 @@
             });
 
             if (response.ok || response.redirected) {
-                toast.success('Logo actualizado correctamente.');
+                Toast.success('Éxito', 'Logo actualizado correctamente.');
                 logoFile = null;
             } else {
-                toast.error('Error al subir el logo.');
+                Toast.error('Error', 'Error al subir el logo.');
             }
         } catch {
-            toast.error('Error de red al subir el logo.');
+            Toast.error('Error', 'Error de red al subir el logo.');
         } finally {
             isUploadingLogo = false;
         }
@@ -172,10 +179,10 @@
             
             const printers = await qz.printers.find();
             qzPrinters = printers;
-            toast.success('QZ Tray conectado. Seleccione su impresora.');
+            Toast.success('Éxito', 'QZ Tray conectado. Seleccione su impresora.');
         } catch (e: any) {
             console.error(e);
-            toast.error('Error con QZ Tray: ' + (e.message || 'Verifica que QZ Tray esté abierto.'));
+            Toast.error('Error', 'Error con QZ Tray: ' + (e.message || 'Verifica que QZ Tray esté abierto.'));
         }
     }
 
@@ -184,7 +191,7 @@
         const apiKey = form.settings.whatsapp_api_key;
 
         if (!apiUrl) {
-            toast.error('La URL de Evolution API es requerida');
+            Toast.error('Error', 'La URL de Evolution API es requerida');
 
             return;
         }
@@ -196,12 +203,12 @@
             });
 
             if (response.ok) {
-                toast.success('✅ Conexión exitosa con Evolution API');
+                Toast.success('Éxito', '✅ Conexión exitosa con Evolution API');
             } else {
-                toast.error('No se pudo conectar con Evolution API');
+                Toast.error('Error', 'No se pudo conectar con Evolution API');
             }
         } catch {
-            toast.error('Error de conexión con Evolution API');
+            Toast.error('Error', 'Error de conexión con Evolution API');
         }
     }
 
@@ -210,19 +217,19 @@
         const token = form.settings.apis_peru_token;
 
         if (!token) {
-            toast.error('El Token de APIs Perú es requerido');
+            Toast.error('Error', 'El Token de APIs Perú es requerido');
             return;
         }
 
         try {
             const response = await fetch(`${url}/api/v1/dni/00000000?token=${token}`);
             if (response.ok || response.status === 404 || response.status === 422) {
-                toast.success('✅ Conexión exitosa con APIs Perú');
+                Toast.success('Éxito', '✅ Conexión exitosa con APIs Perú');
             } else {
-                toast.error('Error al conectar. Verifica tu token.');
+                Toast.error('Error', 'Error al conectar. Verifica tu token.');
             }
         } catch {
-            toast.error('Error de red al conectar con APIs Perú');
+            Toast.error('Error', 'Error de red al conectar con APIs Perú');
         }
     }
 
@@ -259,7 +266,7 @@
         }
     }
 
-    async function checkWhatsAppConnection() {
+    async function checkWhatsAppConnection(showToast = true) {
         if (isCheckingWhatsApp) {
             return;
         }
@@ -287,9 +294,11 @@
                     pollingInterval = null;
                 }
 
-                toast.success(
-                    '<i class="fa-brands fa-whatsapp"></i> WhatsApp conectado',
-                );
+                if (showToast) {
+                    Toast.success('Éxito', 
+                        '<i class="fa-brands fa-whatsapp"></i> WhatsApp conectado',
+                    );
+                }
             } else if (state === 'connecting') {
                 whatsappStatus = 'connecting';
             } else if (state === 'close' || state === 'disconnected') {
@@ -311,7 +320,7 @@
         const instance = form.settings.whatsapp_instance;
 
         if (!apiUrl || !instance) {
-            toast.error('Completa la URL y el Instance ID');
+            Toast.error('Error', 'Completa la URL y el Instance ID');
 
             return;
         }
@@ -325,48 +334,49 @@
                 },
                 body: JSON.stringify({
                     instanceName: instance,
+                    qrcode: true,
                     token: apiKey || 'dental123',
                     integration: 'WHATSAPP-BAILEYS',
                 }),
             }).catch(() => null);
 
-            if (
-                createResponse &&
-                !createResponse.ok &&
-                createResponse.status !== 409
-            ) {
-                toast.warning(
-                    'Error al crear instancia, pero se intentará conectar',
-                );
+            let qrCodeText = null;
+
+            if (createResponse && createResponse.ok) {
+                const data = await createResponse.json();
+                qrCodeText = data.qrcode?.code || data.qrcode?.base64 || data.code || data.base64;
             }
 
-            const connectResponse = await fetch(
-                `${apiUrl}/instance/connect/${instance}`,
-                {
-                    method: 'GET',
-                    headers: { apikey: apiKey },
-                },
-            );
+            if (!qrCodeText) {
+                const connectResponse = await fetch(
+                    `${apiUrl}/instance/connect/${instance}`,
+                    {
+                        method: 'GET',
+                        headers: { apikey: apiKey },
+                    },
+                );
 
-            if (connectResponse.ok) {
-                const data = await connectResponse.json();
-                const qrCodeText = data.code || data.base64;
-
-                if (qrCodeText) {
-                    whatsappQrText = qrCodeText;
-                    whatsappStatus = 'connecting';
-                    toast.info('Código QR generado. Escanéalo con WhatsApp');
-                    startPolling();
-                } else {
-                    toast.error('No se pudo obtener el código QR');
+                if (connectResponse.ok) {
+                    const data = await connectResponse.json();
+                    qrCodeText = data.code || data.base64;
+                } else if (connectResponse.status !== 200) {
+                    const errorText = await connectResponse.text();
+                    Toast.error('Error', `Error ${connectResponse.status}: ${errorText}`);
+                    return;
                 }
+            }
+
+            if (qrCodeText) {
+                whatsappQrText = qrCodeText;
+                whatsappStatus = 'connecting';
+                Toast.info('Información', 'Código QR generado. Escanéalo con WhatsApp');
+                startPolling();
             } else {
-                const errorText = await connectResponse.text();
-                toast.error(`Error ${connectResponse.status}: ${errorText}`);
+                Toast.error('Error', 'No se pudo obtener el código QR');
             }
         } catch (error) {
             console.error('Error:', error);
-            toast.error('Error de conexión con Evolution API');
+            Toast.error('Error', 'Error de conexión con Evolution API');
         }
     }
 
@@ -394,7 +404,7 @@
                     clearInterval(pollingInterval);
                 }
 
-                toast.success('✅ WhatsApp conectado exitosamente');
+                Toast.success('Éxito', '✅ WhatsApp conectado exitosamente');
             }
         }, 5000);
 
@@ -402,7 +412,7 @@
             if (pollingInterval && whatsappStatus !== 'connected') {
                 clearInterval(pollingInterval);
                 pollingInterval = null;
-                toast.warning('Tiempo de espera agotado. Intenta nuevamente.');
+                Toast.info('Atención', 'Tiempo de espera agotado. Intenta nuevamente.');
             }
         }, 120000);
     }
@@ -425,9 +435,9 @@
                 clearInterval(pollingInterval);
             }
 
-            toast.success('WhatsApp desconectado');
+            Toast.success('Éxito', 'WhatsApp desconectado');
         } catch {
-            toast.error('Error al desconectar');
+            Toast.error('Error', 'Error al desconectar');
         }
     }
 
@@ -436,7 +446,8 @@
         form.post('/configuracion', {
             preserveScroll: true,
             onSuccess: () => {
-                setTimeout(() => checkWhatsAppConnection(), 500);
+                Toast.success('Éxito', 'Configuración guardada correctamente.');
+                setTimeout(() => checkWhatsAppConnection(false), 500);
             },
         });
     }
@@ -534,6 +545,39 @@
                 <div class="space-y-2">
                     <Label>Dirección</Label>
                     <Input bind:value={form.settings.clinica_direccion} />
+                </div>
+                <div class="space-y-2">
+                    <Label>Representante Legal (PDFs)</Label>
+                    <Input bind:value={form.settings.representante_legal} placeholder="Ej. Dr. Juan Pérez" />
+                </div>
+                <div class="space-y-2">
+                    <Label>DNI Representante (PDFs)</Label>
+                    <Input bind:value={form.settings.representante_dni} placeholder="Ej. 12345678" />
+                </div>
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Apariencia de Documentos (PDF)</CardTitle>
+                <CardDescription>Personaliza los colores de los documentos PDF (Historia Clínica, Contratos, etc.)</CardDescription>
+            </CardHeader>
+            <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <Label>Color Primario</Label>
+                    <div class="flex items-center gap-3">
+                        <Input type="color" bind:value={form.settings.pdf_color_primary} class="w-16 h-10 p-1" />
+                        <Input bind:value={form.settings.pdf_color_primary} class="font-mono uppercase" placeholder="#0d1b2a" />
+                    </div>
+                    <p class="text-xs text-muted-foreground">Usado en encabezados, firmas y resaltados.</p>
+                </div>
+                <div class="space-y-2">
+                    <Label>Color Secundario</Label>
+                    <div class="flex items-center gap-3">
+                        <Input type="color" bind:value={form.settings.pdf_color_secondary} class="w-16 h-10 p-1" />
+                        <Input bind:value={form.settings.pdf_color_secondary} class="font-mono uppercase" placeholder="#64748b" />
+                    </div>
+                    <p class="text-xs text-muted-foreground">Usado en subtítulos y textos secundarios.</p>
                 </div>
             </CardContent>
         </Card>
@@ -757,6 +801,13 @@
                 <CardDescription>Credenciales de Greenter para emitir comprobantes (Boletas/Facturas).</CardDescription>
             </CardHeader>
             <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2 md:col-span-2">
+                    <Label>Estado de Facturación Electrónica</Label>
+                    <select bind:value={form.settings.sunat_active} class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="0">Desactivado (Solo Tickets Internos)</option>
+                        <option value="1">Activado (Emitir a SUNAT)</option>
+                    </select>
+                </div>
                 <div class="space-y-2">
                     <Label>Entorno SUNAT</Label>
                     <select bind:value={form.settings.sunat_environment} class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
@@ -789,6 +840,16 @@
                         </label>
                     </div>
                     <textarea bind:value={form.settings.sunat_cert_pem} class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono text-xs" rows="4" placeholder="-----BEGIN CERTIFICATE-----..."></textarea>
+                </div>
+                <div class="space-y-2 mt-4 pt-4 border-t">
+                    <Label>Próximo Correlativo Factura (F001)</Label>
+                    <Input bind:value={form.settings.correlativo_F001} placeholder="Ej: 150" type="number" />
+                    <p class="text-xs text-muted-foreground">Si el cliente ya emitió facturas, coloca aquí el próximo número a emitir. El sistema usará este valor o el máximo existente.</p>
+                </div>
+                <div class="space-y-2 mt-4 pt-4 border-t">
+                    <Label>Próximo Correlativo Boleta (B001)</Label>
+                    <Input bind:value={form.settings.correlativo_B001} placeholder="Ej: 300" type="number" />
+                    <p class="text-xs text-muted-foreground">Coloca el próximo número de boleta a emitir.</p>
                 </div>
             </CardContent>
         </Card>

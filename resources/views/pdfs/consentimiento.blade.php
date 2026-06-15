@@ -5,8 +5,8 @@
 {{-- ENCABEZADO --}}
 <div class="header">
     <div class="header-logo">
-        @if(!empty($clinica['logo']))
-            <img src="data:image/png;base64,{{ $clinica['logo'] }}" alt="Logo">
+        @if(!empty($clinica['logo_base64']))
+            <img src="{{ $clinica['logo_base64'] }}" alt="Logo">
         @else
             <div class="header-logo-placeholder">{{ strtoupper(substr($clinica['nombre'],0,2)) }}</div>
         @endif

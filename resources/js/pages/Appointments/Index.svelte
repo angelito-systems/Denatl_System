@@ -18,6 +18,7 @@
     import timeGridPlugin from '@fullcalendar/timegrid';
     import interactionPlugin from '@fullcalendar/interaction';
     import { onMount } from 'svelte';
+    import { Toast } from '@/lib/utils/toast';
     import AppHead from '@/components/AppHead.svelte';
     import InputError from '@/components/InputError.svelte';
     import { Button } from '@/components/ui/button';
@@ -264,14 +265,20 @@
     }
 
     function deleteCita() {
-        if (form.id && confirm('¿Estás seguro de eliminar esta cita?')) {
-            router.delete(`/appointments/${form.id}`, {
-                onSuccess: () => {
-                    isDialogOpen = false;
-                    form.reset();
-                    calendar?.refetchEvents();
+        if (form.id) {
+            Toast.confirm(
+                '¿Estás seguro de eliminar esta cita?',
+                () => {
+                    router.delete(`/appointments/${form.id}`, {
+                        onSuccess: () => {
+                            isDialogOpen = false;
+                            form.reset();
+                            calendar?.refetchEvents();
+                        },
+                    });
                 },
-            });
+                { type: 'destructive', confirmText: 'Eliminar' }
+            );
         }
     }
 

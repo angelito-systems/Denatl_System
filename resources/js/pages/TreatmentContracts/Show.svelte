@@ -21,7 +21,7 @@
     import SignaturePadModal from '@/components/SignaturePadModal.svelte';
     import SendWhatsappButton from '@/components/SendWhatsappButton.svelte';
     import PdfViewerModal from '@/components/PdfViewerModal.svelte';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
 
     let { contract } = $props();
 
@@ -67,7 +67,7 @@
             onSuccess: () => {
                 showNewPaymentModal = false;
                 paymentForm.reset('amount', 'notes');
-                toast.success('Pago registrado');
+                Toast.success('Éxito', 'Pago registrado');
             }
         });
     }
@@ -87,12 +87,12 @@
         }, {
             preserveScroll: true,
             onSuccess: () => {
-                toast.success('Contrato firmado correctamente', { id: 'sign-toast' });
+                Toast.success('Éxito', 'Contrato firmado correctamente', { id: 'sign-toast' });
                 isSignatureModalOpen = false;
                 documentToSign = null;
             },
             onError: () => {
-                toast.error('Ocurrió un error al firmar el documento', { id: 'sign-toast' });
+                Toast.error('Error', 'Ocurrió un error al firmar el documento', { id: 'sign-toast' });
             }
         });
     }
@@ -103,7 +103,7 @@
         } else if (doc.media && doc.media.length > 0) {
             pdfViewerUrl = doc.media[0].original_url;
         } else {
-            toast.error('No se pudo encontrar el archivo del documento');
+            Toast.error('Error', 'No se pudo encontrar el archivo del documento');
             return;
         }
         pdfViewerTitle = doc.name;
@@ -111,14 +111,22 @@
     }
 
     function deleteContract() {
-        if (confirm('¿Estás seguro de eliminar este contrato y su documento asociado? Esta acción no se puede deshacer.')) {
-            router.delete(`/treatment_contracts/${contract.id}`, {
-                onSuccess: () => {
-                    toast.success('Contrato eliminado correctamente');
-                    router.visit(`/patients/${patient.id}?tab=contratos`);
-                }
-            });
-        }
+        Toast.confirm(
+            '¿Estás seguro de eliminar este contrato y su documento asociado?',
+            () => {
+                router.delete(`/treatment_contracts/${contract.id}`, {
+                    onSuccess: () => {
+                        Toast.success('Éxito', 'Contrato eliminado correctamente');
+                        router.visit(`/patients/${patient.id}?tab=contracts`);
+                    }
+                });
+            },
+            {
+                message: 'Esta acción no se puede deshacer.',
+                confirmText: 'Eliminar',
+                type: 'destructive'
+            }
+        );
     }
 </script>
 

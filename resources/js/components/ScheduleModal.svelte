@@ -6,7 +6,7 @@
     import { Input } from '@/components/ui/input';
     import { CalendarDays, Save, Loader2 } from 'lucide-svelte';
     import { useForm } from '@inertiajs/svelte';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
 
     export let isOpen = false;
     export let user: any = null;
@@ -69,7 +69,7 @@
             preserveScroll: true,
             onSuccess: () => {
                 isOpen = false;
-                toast.success('Horario laboral actualizado');
+                Toast.success('Éxito', 'Horario laboral actualizado');
             }
         });
     }

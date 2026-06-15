@@ -11,6 +11,8 @@
         TableHeader,
         TableRow,
     } from '@/components/ui/table';
+    import { Card, CardContent } from '@/components/ui/card';
+    import { Toast } from '@/lib/utils/toast';
     import PromotionFormModal from '@/components/PromotionFormModal.svelte';
 
     let { promotions } = $props();
@@ -29,9 +31,13 @@
     }
 
     function deletePromotion(id: number) {
-        if (confirm('¿Estás seguro de eliminar esta promoción?')) {
-            router.delete(`/promotions/${id}`);
-        }
+        Toast.confirm(
+            '¿Estás seguro de eliminar esta promoción?',
+            () => {
+                router.delete(`/promotions/${id}`);
+            },
+            { type: 'destructive', confirmText: 'Eliminar' }
+        );
     }
 
     function formatDate(dateString: string) {

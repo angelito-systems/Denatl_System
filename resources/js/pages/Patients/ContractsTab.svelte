@@ -6,7 +6,7 @@
     import { Label } from '@/components/ui/label';
     import { useForm, router, Link } from '@inertiajs/svelte';
     import { Plus, PiggyBank, ReceiptText, CheckCircle2, Search, ExternalLink } from 'lucide-svelte';
-    import { toast } from 'svelte-sonner';
+    import { Toast } from '@/lib/utils/toast';
     import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 
     let { patient, treatments = [] } = $props();
@@ -31,7 +31,7 @@
             onSuccess: () => {
                 showNewContractModal = false;
                 contractForm.reset('treatment_id', 'treatment_name', 'total_cost', 'down_payment', 'installments');
-                toast.success('Contrato creado y documento borrador generado');
+                Toast.success('Éxito', 'Contrato creado y documento borrador generado');
             }
         });
     }

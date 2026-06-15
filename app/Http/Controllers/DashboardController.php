@@ -30,13 +30,14 @@ class DashboardController extends Controller
             ->whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
             ->sum('amount');
 
-        // Próximas citas de hoy que no han finalizado
+        // Próximas citas de hoy que no han finalizado (con margen de 1 hora hacia atrás para no mostrar citas muy antiguas)
         $nextAppointments = Appointment::with(['patient:id,first_name,last_name'])
             ->where('date', Carbon::today()->toDateString())
             ->where(function ($q) {
                 $q->whereNull('projector_status')
                   ->orWhere('projector_status', '!=', 'finished');
             })
+            ->whereTime('start_time', '>=', Carbon::now()->subHours(1)->format('H:i:s'))
             ->orderBy('start_time')
             ->take(10)
             ->get();

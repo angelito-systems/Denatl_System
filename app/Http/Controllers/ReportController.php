@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Configuration;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Models\TreatmentContract;
 use App\Services\PdfGeneratorService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -36,7 +37,7 @@ class ReportController extends Controller
         if ($patientSearch) {
             $patientsIds = Patient::where('first_name', 'like', "%{$patientSearch}%")
                 ->orWhere('last_name', 'like', "%{$patientSearch}%")
-                ->orWhere('document_number', 'like', "%{$patientSearch}%")
+                ->orWhere('dni', 'like', "%{$patientSearch}%")
                 ->pluck('id');
 
             $paymentsQuery->whereIn('patient_id', $patientsIds);
@@ -94,7 +95,7 @@ class ReportController extends Controller
             ->get()
             ->map(function ($item) {
                 return [
-                    'name' => $item->dentist ? $item->dentist->first_name . ' ' . $item->dentist->last_name : 'No Asignado',
+                    'name' => $item->dentist ? $item->dentist->first_name.' '.$item->dentist->last_name : 'No Asignado',
                     'count' => $item->count,
                 ];
             });
@@ -110,14 +111,14 @@ class ReportController extends Controller
             ->get()
             ->map(function ($item) {
                 return [
-                    'name' => $item->patient ? $item->patient->first_name . ' ' . $item->patient->last_name : 'Desconocido',
+                    'name' => $item->patient ? $item->patient->first_name.' '.$item->patient->last_name : 'Desconocido',
                     'total' => $item->total,
                 ];
             });
 
         // 7. Estado de Contratos (Pagado vs Deuda)
         $contractPayments = (clone $paymentsQuery)->whereNotNull('treatment_contract_id')->where('status', 'Pagado')->sum('amount');
-        $contractTotal = \App\Models\TreatmentContract::whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])->sum('total_cost');
+        $contractTotal = TreatmentContract::whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])->sum('total_cost');
         $contractsChart = [
             ['name' => 'Pagado', 'value' => $contractPayments],
             ['name' => 'Deuda', 'value' => max(0, $contractTotal - $contractPayments)],
@@ -172,7 +173,7 @@ class ReportController extends Controller
         if ($patientSearch) {
             $patientsIds = Patient::where('first_name', 'like', "%{$patientSearch}%")
                 ->orWhere('last_name', 'like', "%{$patientSearch}%")
-                ->orWhere('document_number', 'like', "%{$patientSearch}%")
+                ->orWhere('dni', 'like', "%{$patientSearch}%")
                 ->pluck('id');
 
             $paymentsQuery->whereIn('patient_id', $patientsIds);

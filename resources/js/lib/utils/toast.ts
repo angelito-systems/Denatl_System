@@ -1,13 +1,9 @@
 import { toast } from 'svelte-sonner';
 import HtmlToast from '@/components/HtmlToast.svelte';
+import ConfirmToast from '@/components/ConfirmToast.svelte';
 
 export const Toast = {
-    /**
-     * Muestra una notificación de éxito
-     * @param {string} title - Título del toast
-     * @param {string} htmlContent - Contenido en formato HTML
-     * @param {object} options - Opciones adicionales de svelte-sonner (duración, etc.)
-     */
+    // ... success, error, info
     success: (title, htmlContent, options = {}) => {
         toast.custom(HtmlToast, {
             componentProps: { title, html: htmlContent, type: 'success' },
@@ -15,20 +11,14 @@ export const Toast = {
         });
     },
 
-    /**
-     * Muestra una notificación de error (usa el color destructive)
-     */
     error: (title, htmlContent, options = {}) => {
         toast.custom(HtmlToast, {
             componentProps: { title, html: htmlContent, type: 'error' },
-            duration: 5000, // Los errores suelen necesitar más tiempo para leerse
+            duration: 5000,
             ...options,
         });
     },
 
-    /**
-     * Muestra una notificación informativa
-     */
     info: (title, htmlContent, options = {}) => {
         toast.custom(HtmlToast, {
             componentProps: { title, html: htmlContent, type: 'info' },
@@ -36,8 +26,21 @@ export const Toast = {
         });
     },
 
-    /**
-     * Permite cerrar todos los toasts o uno específico
-     */
+    confirm: (message, onConfirm, options = {}) => {
+        toast.custom(ConfirmToast, {
+            componentProps: { 
+                title: options.title || 'Confirmar Acción',
+                message: message,
+                onConfirm: onConfirm,
+                onCancel: options.onCancel || (() => {}),
+                confirmText: options.confirmText || 'Aceptar',
+                cancelText: options.cancelText || 'Cancelar',
+                type: options.type || 'default'
+            },
+            duration: Infinity, // No auto-close para confirmaciones
+            ...options,
+        });
+    },
+
     dismiss: (id) => toast.dismiss(id),
 };

@@ -47,6 +47,9 @@ class HandleInertiaRequests extends Middleware
                 ]) : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'sunatConfig' => [
+                'active' => $config->where('key', 'sunat_active')->first()?->value === '1',
+            ],
             'evolutionConfig' => [
                 'url' => $config->where('key', 'whatsapp_api_url')->first()?->value ?? null,
                 'apiKey' => $config->where('key', 'whatsapp_api_key')->first()?->value ?? null,
