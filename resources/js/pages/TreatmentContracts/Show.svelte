@@ -47,7 +47,7 @@
         treatment_contract_id: contract.id,
         amount: '',
         payment_method: 'Transferencia',
-        receipt_type: ($page.props.sunatConfig?.active ?? false) ? 'Boleta' : 'Ticket',
+        receipt_type: (page.props.sunatConfig?.active ?? false) ? 'Boleta' : 'Ticket',
         status: 'Pagado',
         notes: '',
     });
@@ -335,7 +335,7 @@
                 <div class="grid gap-2">
                     <Label>Comprobante</Label>
                     <select bind:value={paymentForm.receipt_type} class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                        {#if $page.props.sunatConfig?.active ?? false}
+                        {#if page.props.sunatConfig?.active ?? false}
                             <option value="Boleta">Boleta</option>
                             <option value="Factura">Factura</option>
                         {/if}

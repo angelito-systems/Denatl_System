@@ -89,8 +89,18 @@ class SunatService
     public function buildInvoice(Payment $payment): Invoice
     {
         $isFactura = $payment->receipt_type === 'Factura';
-        $tipoDoc = $isFactura ? '01' : '03';
-        $serie = $payment->sunat_serie ?: ($isFactura ? 'F001' : 'B001');
+        $isTicket = $payment->receipt_type === 'Ticket';
+
+        if ($isFactura) {
+            $tipoDoc = '01';
+            $serie = $payment->sunat_serie ?: 'F001';
+        } elseif ($isTicket) {
+            $tipoDoc = '00';
+            $serie = $payment->sunat_serie ?: 'T001';
+        } else {
+            $tipoDoc = '03';
+            $serie = $payment->sunat_serie ?: 'B001';
+        }
 
         if ($payment->sunat_correlativo) {
             $correlativo = $payment->sunat_correlativo;

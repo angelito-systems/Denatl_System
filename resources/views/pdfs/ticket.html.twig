@@ -310,7 +310,7 @@
     {% endif %}
 
     {# ── QR ── #}
-    {% if params.system.qr %}
+    {% if params.system.qr and doc.tipoDoc in ['01','03','07','08'] %}
     <div class="qr-section">
         <img src="data:image/svg+xml;base64,{{ params.system.qr }}" alt="QR SUNAT">
     </div>
@@ -331,15 +331,16 @@
         {% if params.system.ticket_pie %}
             <div style="font-weight:bold;margin-bottom:3px;">{{ params.system.ticket_pie }}</div>
         {% endif %}
+        {% if doc.tipoDoc in ['01','03','07','08'] %}
         Representación Impresa de la
         {% if doc.tipoDoc == '01' %}FACTURA
         {% elseif doc.tipoDoc == '03' %}BOLETA DE VENTA
         {% elseif doc.tipoDoc == '07' %}NOTA DE CRÉDITO
         {% elseif doc.tipoDoc == '08' %}NOTA DE DÉBITO
-        {% else %}COMPROBANTE
         {% endif %}
         ELECTRÓNICA.<br>
         Puede consultar en: ww1.sunat.gob.pe
+        {% endif %}
     </div>
 
 </div>

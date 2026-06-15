@@ -43,14 +43,14 @@
 
     // Payment Form Modal State
     let isPaymentModalOpen = $state(false);
-    let sunatActive = $derived($page.props.sunatConfig?.active ?? false);
+    let sunatActive = $derived(page.props.sunatConfig?.active ?? false);
 
     const paymentForm = useForm({
         patient_id: '',
         treatment_contract_id: '',
         amount: '',
         payment_method: 'Efectivo',
-        receipt_type: ($page.props.sunatConfig?.active ?? false) ? 'Boleta' : 'Ticket',
+        receipt_type: (page.props.sunatConfig?.active ?? false) ? 'Boleta' : 'Ticket',
         status: 'Pagado',
         notes: ''
     });
