@@ -11,7 +11,7 @@ param (
 # Validar Administrador
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
-    Write-Warning "Este script debe ejecutarse como Administrador para configurar el Firewall y los Certificados SSL."
+    Write-Warning "Este script debe ejecutarse como Administrador para configurar el Firewall."
     Write-Warning "Cierra esta ventana, haz clic derecho en PowerShell y selecciona 'Ejecutar como administrador'."
     exit
 }
@@ -36,14 +36,14 @@ if (-not (Test-Path ".env")) {
     Write-Host "[1/8] Creando archivo .env desde .env.example..." -ForegroundColor Yellow
     Copy-Item ".env.example" ".env"
     
-    # Actualizar APP_URL con el dominio local (Usando HTTPS)
+    # Actualizar APP_URL con el dominio local (Usando HTTP)
     $envContent = Get-Content ".env"
-    $envContent = $envContent -replace "^APP_URL=.*", "APP_URL=https://$LocalDomain"
+    $envContent = $envContent -replace "^APP_URL=.*", "APP_URL=http://$LocalDomain"
     Set-Content -Path ".env" -Value $envContent
     
-    Write-Host "Archivo .env creado y APP_URL configurado a https://$LocalDomain." -ForegroundColor Green
+    Write-Host "Archivo .env creado y APP_URL configurado a http://$LocalDomain." -ForegroundColor Green
 } else {
-    Write-Host "[1/8] Archivo .env ya existe. Asegúrate de que APP_URL sea https://$LocalDomain" -ForegroundColor DarkGray
+    Write-Host "[1/8] Archivo .env ya existe. Asegúrate de que APP_URL sea http://$LocalDomain" -ForegroundColor DarkGray
 }
 
 # 3. Configurar Hosts para dominio local
@@ -57,46 +57,12 @@ if ($hostsContent -notmatch "(?m)^127\.0\.0\.1\s+$([regex]::Escape($LocalDomain)
     Write-Host "El dominio $LocalDomain ya estaba configurado." -ForegroundColor DarkGray
 }
 
-# 4. Generar certificados SSL locales
-Write-Host "[3/8] Verificando y generando certificados SSL locales..." -ForegroundColor Yellow
-$sslDir = "$PWD\docker\nginx\ssl"
-if (-not (Test-Path $sslDir)) {
-    New-Item -ItemType Directory -Path $sslDir | Out-Null
-}
+# 4. Omitir certificados SSL locales
+Write-Host "[3/8] Omitiendo SSL (Configurado para HTTP)..." -ForegroundColor DarkGray
 
-$sslScript = @"
-apk add --no-cache openssl
-cd /ssl
-if [ ! -f rootCA.key ]; then
-    openssl genrsa -out rootCA.key 4096
-    openssl req -x509 -new -nodes -key rootCA.key -sha256 -days 3650 -out rootCA.crt -subj "/C=PE/ST=Lima/L=Lima/O=DentalSystem/CN=DentalSystem Local Root CA"
-fi
-if [ ! -f server.key ]; then
-    openssl genrsa -out server.key 2048
-    openssl req -new -key server.key -out server.csr -subj "/C=PE/ST=Lima/L=Lima/O=DentalSystem/CN=$LocalDomain"
-    echo "subjectAltName=DNS:$LocalDomain,IP:$ip" > extfile.cnf
-    openssl x509 -req -in server.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateserial -out server.crt -days 3650 -sha256 -extfile extfile.cnf
-    rm server.csr extfile.cnf
-fi
-"@
-
-# Usamos alpine openssl para generar los certificados sin depender de OpenSSL en Windows
-docker run --rm -v "$($PWD.Path.Replace('\','/'))/docker/nginx/ssl:/ssl" alpine sh -c $sslScript
-
-if (Test-Path "$sslDir\rootCA.crt") {
-    $cert = Get-ChildItem "Cert:\LocalMachine\Root" | Where-Object { $_.Subject -match "DentalSystem Local Root CA" }
-    if (-not $cert) {
-        Write-Host "Instalando Certificado Raíz en Windows (puede que aparezca una confirmación de seguridad)..." -ForegroundColor Yellow
-        Import-Certificate -FilePath "$sslDir\rootCA.crt" -CertStoreLocation "Cert:\LocalMachine\Root" > $null
-        Write-Host "Certificado instalado correctamente en esta computadora." -ForegroundColor Green
-    } else {
-        Write-Host "El certificado Raíz ya estaba instalado localmente." -ForegroundColor DarkGray
-    }
-}
-
-# 5. Configurar Firewall de Windows para los puertos 80, 443 y 8080
+# 5. Configurar Firewall de Windows para los puertos 80 y 8080
 Write-Host "[4/8] Configurando reglas del Firewall de Windows..." -ForegroundColor Yellow
-$ports = @{ "80" = "HTTP"; "443" = "HTTPS"; "8080" = "Evolution API" }
+$ports = @{ "80" = "HTTP"; "8080" = "Evolution API" }
 foreach ($port in $ports.Keys) {
     $name = "Dental System ($($ports[$port]) $port)"
     $rule = Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue
@@ -138,8 +104,8 @@ Write-Host "[8/8] Informacion Final" -ForegroundColor Yellow
 Write-Host "=======================================================" -ForegroundColor Cyan
 Write-Host " ¡INSTALACION COMPLETADA EXITOSAMENTE! " -ForegroundColor Green
 Write-Host " "
-Write-Host " Acceso seguro local : https://$LocalDomain" -ForegroundColor White
-Write-Host " Acceso desde otras computadoras (sin script): https://$ip" -ForegroundColor White
+Write-Host " Acceso seguro local : http://$LocalDomain" -ForegroundColor White
+Write-Host " Acceso desde otras computadoras (sin script): http://$ip" -ForegroundColor White
 Write-Host " "
 Write-Host " Script de cliente generado en: scripts\conectar_cliente.ps1" -ForegroundColor Yellow
 Write-Host " Copia este script en un USB y ejecutalo en las otras computadoras de la clinica." -ForegroundColor Yellow
