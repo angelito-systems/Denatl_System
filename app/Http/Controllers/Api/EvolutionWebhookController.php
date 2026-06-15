@@ -12,6 +12,14 @@ class EvolutionWebhookController extends Controller
 {
     public function handle(Request $request, $eventName = null)
     {
+        // Validar token secreto en la URL (ej. ?token=SECRETO)
+        $expectedToken = env('EVOLUTION_WEBHOOK_TOKEN', 'dental123'); // Fallback para compatibilidad
+        if ($request->query('token') !== $expectedToken) {
+            Log::warning('Intento de acceso a webhook sin token válido', ['ip' => $request->ip()]);
+
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
         // Evolution API envía un objeto con event y data
         $payload = $request->all();
 
