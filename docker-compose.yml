@@ -64,6 +64,8 @@ services:
         image: mysql:8.0
         container_name: dental_system_mysql
         restart: always
+        ports:
+            - "3306:3306"
         environment:
             MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
             MYSQL_DATABASE: ${DB_DATABASE:-system_dental}
