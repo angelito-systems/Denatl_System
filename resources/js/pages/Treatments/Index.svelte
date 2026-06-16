@@ -217,9 +217,12 @@
                 </div>
             </div>
 
-            <div class="flex items-center space-x-2 pt-2">
-                <input type="checkbox" id="is_per_tooth" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600" bind:checked={treatmentForm.is_per_tooth} />
-                <Label for="is_per_tooth" class="cursor-pointer font-medium text-gray-700">Se cobra por diente (Cantidad)</Label>
+            <div class="space-y-2">
+                <Label>Modalidad de Cobro *</Label>
+                <select class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" bind:value={treatmentForm.is_per_tooth}>
+                    <option value={false}>Cobro Único / General</option>
+                    <option value={true}>Se cobra por Diente (Cantidad)</option>
+                </select>
             </div>
 
             <div class="flex justify-end gap-2 pt-4">
