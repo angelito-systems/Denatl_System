@@ -41,7 +41,7 @@ class PaymentController extends Controller
         $patients = Patient::with(['treatmentContracts' => function ($q) {
             $q->where('status', '!=', 'Finalizado');
         }])->select('id', 'first_name', 'last_name', 'dni', 'phone')->get();
-        $treatments = Treatment::orderBy('name')->get(['id', 'name', 'base_price']);
+        $treatments = Treatment::orderBy('name')->get(['id', 'name', 'base_price', 'is_per_tooth']);
 
         return Inertia::render('Payments/Index', [
             'payments' => $payments,

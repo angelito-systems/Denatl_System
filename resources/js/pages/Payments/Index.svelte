@@ -44,6 +44,8 @@
     // Payment Form Modal State
     let isPaymentModalOpen = $state(false);
     let sunatActive = $derived(page.props.sunatConfig?.active ?? false);
+    
+    let teethQuantity = $state(1);
 
     const paymentForm = useForm({
         id: null,
@@ -111,16 +113,31 @@
     function onTreatmentChange(treatmentId: string) {
         if (!treatmentId || treatmentId === 'none') {
             paymentForm.treatment_id = '';
+            teethQuantity = 1;
             return;
         }
         paymentForm.treatment_id = treatmentId;
         const treatment = treatments?.find((t: any) => t.id.toString() === treatmentId);
         if (treatment && paymentForm.treatment_contract_id === '') {
-            paymentForm.amount = treatment.base_price?.toString() || '0.00';
-            if (!paymentForm.notes) {
-                paymentForm.notes = `Pago por tratamiento: ${treatment.name}`;
-            }
+            teethQuantity = 1;
+            recalculateTreatmentAmount(treatment, 1);
         }
+    }
+
+    function onTeethQuantityChange() {
+        if (!paymentForm.treatment_id || paymentForm.treatment_id === 'none') return;
+        const treatment = treatments?.find((t: any) => t.id.toString() === paymentForm.treatment_id);
+        if (treatment) {
+            recalculateTreatmentAmount(treatment, teethQuantity);
+        }
+    }
+
+    function recalculateTreatmentAmount(treatment: any, qty: number) {
+        const total = (Number(treatment.base_price) || 0) * qty;
+        paymentForm.amount = total.toString();
+        paymentForm.notes = treatment.is_per_tooth 
+            ? `Pago por tratamiento: ${treatment.name} (${qty} ${qty === 1 ? 'diente' : 'dientes'})`
+            : `Pago por tratamiento: ${treatment.name}`;
     }
 
     // WhatsApp Modal State
@@ -227,12 +244,14 @@
         paymentForm.receipt_type = payment.receipt_type;
         paymentForm.status = payment.status;
         paymentForm.notes = payment.notes || '';
+        teethQuantity = 1; // Default
     }
 
     function openCreateModal() {
         paymentForm.reset();
         paymentForm.id = null;
         patientSearchQuery = '';
+        teethQuantity = 1;
         isPaymentModalOpen = true;
     }
 
@@ -519,33 +538,53 @@
                 {/if}
 
                 {#if !paymentForm.treatment_contract_id || paymentForm.treatment_contract_id === 'none'}
-                    <div class="space-y-2 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                        <Label class="text-emerald-800">Tratamiento Directo (Opcional)</Label>
-                        <Select 
-                            type="single" 
-                            bind:value={paymentForm.treatment_id}
-                            onValueChange={onTreatmentChange}
-                        >
-                            <SelectTrigger class="h-11 rounded-xl bg-white">
-                                {#if paymentForm.treatment_id && paymentForm.treatment_id !== 'none'}
-                                    {@const t = treatments?.find((tr: any) => tr.id.toString() === paymentForm.treatment_id.toString())}
-                                    {t ? `${t.name} (S/ ${t.base_price})` : 'Seleccionar tratamiento...'}
-                                {:else}
-                                    Ninguno / Otro
-                                {/if}
-                            </SelectTrigger>
-                            <SelectContent class="rounded-xl">
-                                <SelectItem value="none" class="rounded-lg">Ninguno / Otro</SelectItem>
-                                {#if treatments && treatments.length > 0}
-                                    {#each treatments as treatment}
-                                        <SelectItem value={treatment.id.toString()} class="rounded-lg">
-                                            {treatment.name} (Precio base: S/ {treatment.base_price})
-                                        </SelectItem>
-                                    {/each}
-                                {/if}
-                            </SelectContent>
-                        </Select>
-                        <p class="text-xs text-emerald-600/80">Selecciona un tratamiento si el pago no es por un contrato y deseas aplicar su precio base.</p>
+                    <div class="space-y-4 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <div class="space-y-2">
+                            <Label class="text-emerald-800">Tratamiento Directo (Opcional)</Label>
+                            <Select 
+                                type="single" 
+                                bind:value={paymentForm.treatment_id}
+                                onValueChange={onTreatmentChange}
+                            >
+                                <SelectTrigger class="h-11 rounded-xl bg-white">
+                                    {#if paymentForm.treatment_id && paymentForm.treatment_id !== 'none'}
+                                        {@const t = treatments?.find((tr: any) => tr.id.toString() === paymentForm.treatment_id.toString())}
+                                        {t ? `${t.name} (S/ ${t.base_price})` : 'Seleccionar tratamiento...'}
+                                    {:else}
+                                        Ninguno / Otro
+                                    {/if}
+                                </SelectTrigger>
+                                <SelectContent class="rounded-xl">
+                                    <SelectItem value="none" class="rounded-lg">Ninguno / Otro</SelectItem>
+                                    {#if treatments && treatments.length > 0}
+                                        {#each treatments as treatment}
+                                            <SelectItem value={treatment.id.toString()} class="rounded-lg">
+                                                {treatment.name} (Precio base: S/ {treatment.base_price})
+                                            </SelectItem>
+                                        {/each}
+                                    {/if}
+                                </SelectContent>
+                            </Select>
+                            <p class="text-xs text-emerald-600/80">Selecciona un tratamiento si el pago no es por un contrato y deseas aplicar su precio base.</p>
+                        </div>
+
+                        {#if paymentForm.treatment_id && paymentForm.treatment_id !== 'none'}
+                            {@const selectedT = treatments?.find((tr: any) => tr.id.toString() === paymentForm.treatment_id.toString())}
+                            {#if selectedT?.is_per_tooth}
+                                <div class="space-y-2 pt-2 border-t border-emerald-200/50">
+                                    <Label class="text-emerald-800">Cantidad de Dientes</Label>
+                                    <Input 
+                                        type="number" 
+                                        min="1" 
+                                        max="32" 
+                                        bind:value={teethQuantity} 
+                                        oninput={onTeethQuantityChange}
+                                        class="h-11 rounded-xl bg-white w-full sm:w-1/3" 
+                                    />
+                                    <p class="text-xs text-emerald-600/80">Este tratamiento se cobra por diente. El precio se multiplicará por esta cantidad.</p>
+                                </div>
+                            {/if}
+                        {/if}
                     </div>
                 {/if}
                 
