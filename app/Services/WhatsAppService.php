@@ -160,7 +160,7 @@ class WhatsAppService
         if ($telefono) {
             $mensaje .= " o llamando al {$telefono}.";
         } else {
-            $mensaje .= ".";
+            $mensaje .= '.';
         }
 
         $this->enviarMensaje($cita->patient->phone, $mensaje);

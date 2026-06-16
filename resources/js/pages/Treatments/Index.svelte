@@ -39,7 +39,8 @@
         name: '',
         category: 'Ortodoncia',
         base_price: '',
-        estimated_duration_minutes: '30'
+        estimated_duration_minutes: '30',
+        is_per_tooth: false
     });
 
     function handleSearch() {
@@ -61,6 +62,7 @@
         treatmentForm.category = treatment.category;
         treatmentForm.base_price = treatment.base_price;
         treatmentForm.estimated_duration_minutes = treatment.estimated_duration_minutes;
+        treatmentForm.is_per_tooth = !!treatment.is_per_tooth;
         isTreatmentModalOpen = true;
     }
 
@@ -150,6 +152,11 @@
                                 <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                                     {treatment.category}
                                 </span>
+                                {#if treatment.is_per_tooth}
+                                    <span class="ml-2 px-2 py-1 bg-emerald-100 text-emerald-800 text-xs rounded-full" title="Se cobra por cada pieza dental">
+                                        Por Diente
+                                    </span>
+                                {/if}
                             </TableCell>
                             <TableCell>S/ {Number(treatment.base_price).toFixed(2)}</TableCell>
                             <TableCell>{treatment.estimated_duration_minutes} min</TableCell>
@@ -191,6 +198,7 @@
                     <option value="Endodoncia">Endodoncia</option>
                     <option value="Odontopediatría">Odontopediatría</option>
                     <option value="Estética">Estética</option>
+                    <option value="Rehabilitación">Rehabilitación</option>
                     <option value="General">General</option>
                 </select>
                 {#if treatmentForm.errors.category}<p class="text-xs text-red-500">{treatmentForm.errors.category}</p>{/if}
@@ -207,6 +215,11 @@
                     <Input type="number" min="1" bind:value={treatmentForm.estimated_duration_minutes} required />
                     {#if treatmentForm.errors.estimated_duration_minutes}<p class="text-xs text-red-500">{treatmentForm.errors.estimated_duration_minutes}</p>{/if}
                 </div>
+            </div>
+
+            <div class="flex items-center space-x-2 pt-2">
+                <input type="checkbox" id="is_per_tooth" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600" bind:checked={treatmentForm.is_per_tooth} />
+                <Label for="is_per_tooth" class="cursor-pointer font-medium text-gray-700">Se cobra por diente (Cantidad)</Label>
             </div>
 
             <div class="flex justify-end gap-2 pt-4">

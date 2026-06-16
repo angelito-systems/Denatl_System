@@ -24,6 +24,8 @@ class UpdatePaymentRequest extends FormRequest
     {
         return [
             'patient_id' => 'required|exists:patients,id',
+            'treatment_contract_id' => 'nullable|exists:treatment_contracts,id',
+            'treatment_id' => 'nullable|exists:treatments,id',
             'amount' => 'required|numeric|min:0',
             'payment_method' => 'required|string',
             'receipt_type' => 'required|string',

@@ -31,7 +31,7 @@
     import PdfViewerModal from '@/components/PdfViewerModal.svelte';
     import SendWhatsappButton from '@/components/SendWhatsappButton.svelte';
 
-    let { payments, patients, filters } = $props();
+    let { payments, patients, treatments, filters } = $props();
 
     let search = $state(filters?.search || '');
     let searchTimeout: ReturnType<typeof setTimeout>;
@@ -46,8 +46,10 @@
     let sunatActive = $derived(page.props.sunatConfig?.active ?? false);
 
     const paymentForm = useForm({
+        id: null,
         patient_id: '',
         treatment_contract_id: '',
+        treatment_id: '',
         amount: '',
         payment_method: 'Efectivo',
         receipt_type: (page.props.sunatConfig?.active ?? false) ? 'Boleta' : 'Ticket',
@@ -89,6 +91,7 @@
         } else if (!showPatientDropdown) {
             patientSearchQuery = '';
             paymentForm.treatment_contract_id = '';
+            paymentForm.treatment_id = '';
         }
     });
 
@@ -102,6 +105,21 @@
         if (contract) {
             const suggestedAmount = Math.min(Number(contract.installment_amount || contract.balance_due), Number(contract.balance_due));
             paymentForm.amount = suggestedAmount > 0 ? suggestedAmount.toString() : contract.balance_due;
+        }
+    }
+
+    function onTreatmentChange(treatmentId: string) {
+        if (!treatmentId || treatmentId === 'none') {
+            paymentForm.treatment_id = '';
+            return;
+        }
+        paymentForm.treatment_id = treatmentId;
+        const treatment = treatments?.find((t: any) => t.id.toString() === treatmentId);
+        if (treatment && paymentForm.treatment_contract_id === '') {
+            paymentForm.amount = treatment.base_price?.toString() || '0.00';
+            if (!paymentForm.notes) {
+                paymentForm.notes = `Pago por tratamiento: ${treatment.name}`;
+            }
         }
     }
 
@@ -198,20 +216,52 @@
         });
     }
 
+    function openEditModal(payment: any) {
+        isPaymentModalOpen = true;
+        paymentForm.id = payment.id;
+        paymentForm.patient_id = payment.patient_id?.toString() || '';
+        paymentForm.treatment_contract_id = payment.treatment_contract_id?.toString() || '';
+        paymentForm.treatment_id = payment.treatment_id?.toString() || '';
+        paymentForm.amount = payment.amount;
+        paymentForm.payment_method = payment.payment_method;
+        paymentForm.receipt_type = payment.receipt_type;
+        paymentForm.status = payment.status;
+        paymentForm.notes = payment.notes || '';
+    }
+
+    function openCreateModal() {
+        paymentForm.reset();
+        paymentForm.id = null;
+        patientSearchQuery = '';
+        isPaymentModalOpen = true;
+    }
+
     function submitPayment(e: Event) {
         e.preventDefault();
-        paymentForm.post('/payments', {
-            preserveScroll: true,
-            onSuccess: (pageObj) => {
-                isPaymentModalOpen = false;
-                paymentForm.reset();
-
-                const flash = pageObj.props.flash as any;
-                if (flash?.new_payment_id) {
-                    printAndShow(flash.new_payment_id);
+        
+        if (paymentForm.id) {
+            paymentForm.put(`/payments/${paymentForm.id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    isPaymentModalOpen = false;
+                    paymentForm.reset();
+                    Toast.success('Éxito', 'Pago actualizado exitosamente.');
                 }
-            }
-        });
+            });
+        } else {
+            paymentForm.post('/payments', {
+                preserveScroll: true,
+                onSuccess: (pageObj) => {
+                    isPaymentModalOpen = false;
+                    paymentForm.reset();
+
+                    const flash = pageObj.props.flash as any;
+                    if (flash?.new_payment_id) {
+                        printAndShow(flash.new_payment_id);
+                    }
+                }
+            });
+        }
     }
 
     function sendWhatsApp() {
@@ -249,7 +299,7 @@
                 <Download class="h-4 w-4 mr-2" />
                 Exportar
             </Button>
-            <Button class="bg-blue-600 hover:bg-blue-700" onclick={() => isPaymentModalOpen = true}>
+            <Button class="bg-blue-600 hover:bg-blue-700" onclick={openCreateModal}>
                 <Plus class="h-4 w-4 mr-2" />
                 Registrar Pago
             </Button>
@@ -332,11 +382,14 @@
                                             </Button>
                                         {/if}
                                     {/if}
-                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onclick={() => { pdfViewerUrl = `/pagos/${payment.id}/pdf`; pdfViewerTitle = `Comprobante ${payment.id}`; isPdfViewerOpen = true; }} title="Ver Comprobante">
-                                        <Eye class="h-4 w-4" />
-                                    </Button>
-                                    <SendWhatsappButton 
-                                        phone={payment.patient?.phone} 
+                                     <Button variant="ghost" size="icon" class="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onclick={() => { pdfViewerUrl = `/pagos/${payment.id}/pdf`; pdfViewerTitle = `Comprobante ${payment.id}`; isPdfViewerOpen = true; }} title="Ver Comprobante">
+                                         <Eye class="h-4 w-4" />
+                                     </Button>
+                                     <Button variant="ghost" size="icon" class="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50" onclick={() => openEditModal(payment)} title="Editar Pago">
+                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                     </Button>
+                                     <SendWhatsappButton 
+                                         phone={payment.patient?.phone} 
                                         payment_id={payment.id} 
                                         type="payment"
                                         plantilla="pago_confirmado"
@@ -387,9 +440,9 @@
 <Dialog bind:open={isPaymentModalOpen}>
     <DialogContent class="sm:max-w-lg">
         <DialogHeader>
-            <DialogTitle>Registrar Nuevo Pago</DialogTitle>
+            <DialogTitle>{paymentForm.id ? 'Editar Pago' : 'Registrar Nuevo Pago'}</DialogTitle>
             <DialogDescription>
-                Ingresa los detalles del pago.
+                {paymentForm.id ? 'Modifica los detalles del pago.' : 'Ingresa los detalles del pago.'}
             </DialogDescription>
         </DialogHeader>
         <form onsubmit={submitPayment} class="space-y-4 pt-4">
@@ -462,6 +515,37 @@
                             </SelectContent>
                         </Select>
                         <p class="text-xs text-blue-600/80">Selecciona si el pago abonará a un tratamiento financiado.</p>
+                    </div>
+                {/if}
+
+                {#if !paymentForm.treatment_contract_id || paymentForm.treatment_contract_id === 'none'}
+                    <div class="space-y-2 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <Label class="text-emerald-800">Tratamiento Directo (Opcional)</Label>
+                        <Select 
+                            type="single" 
+                            bind:value={paymentForm.treatment_id}
+                            onValueChange={onTreatmentChange}
+                        >
+                            <SelectTrigger class="h-11 rounded-xl bg-white">
+                                {#if paymentForm.treatment_id && paymentForm.treatment_id !== 'none'}
+                                    {@const t = treatments?.find((tr: any) => tr.id.toString() === paymentForm.treatment_id.toString())}
+                                    {t ? `${t.name} (S/ ${t.base_price})` : 'Seleccionar tratamiento...'}
+                                {:else}
+                                    Ninguno / Otro
+                                {/if}
+                            </SelectTrigger>
+                            <SelectContent class="rounded-xl">
+                                <SelectItem value="none" class="rounded-lg">Ninguno / Otro</SelectItem>
+                                {#if treatments && treatments.length > 0}
+                                    {#each treatments as treatment}
+                                        <SelectItem value={treatment.id.toString()} class="rounded-lg">
+                                            {treatment.name} (Precio base: S/ {treatment.base_price})
+                                        </SelectItem>
+                                    {/each}
+                                {/if}
+                            </SelectContent>
+                        </Select>
+                        <p class="text-xs text-emerald-600/80">Selecciona un tratamiento si el pago no es por un contrato y deseas aplicar su precio base.</p>
                     </div>
                 {/if}
                 

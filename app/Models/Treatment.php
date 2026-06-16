@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['name', 'category', 'base_price', 'estimated_duration_minutes'])]
+#[Fillable(['name', 'category', 'base_price', 'estimated_duration_minutes', 'is_per_tooth'])]
 class Treatment extends Model
 {
     /** @use HasFactory<TreatmentFactory> */

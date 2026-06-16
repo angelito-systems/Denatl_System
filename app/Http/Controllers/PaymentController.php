@@ -9,6 +9,7 @@ use App\Models\CashboxTransaction;
 use App\Models\Configuration;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Models\Treatment;
 use App\Models\TreatmentContract;
 use App\Services\PdfGeneratorService;
 use App\Services\SunatService;
@@ -40,10 +41,12 @@ class PaymentController extends Controller
         $patients = Patient::with(['treatmentContracts' => function ($q) {
             $q->where('status', '!=', 'Finalizado');
         }])->select('id', 'first_name', 'last_name', 'dni', 'phone')->get();
+        $treatments = Treatment::orderBy('name')->get(['id', 'name', 'base_price']);
 
         return Inertia::render('Payments/Index', [
             'payments' => $payments,
             'patients' => $patients,
+            'treatments' => $treatments,
             'filters' => $request->only(['search']),
         ]);
     }

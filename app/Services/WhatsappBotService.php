@@ -24,6 +24,7 @@ class WhatsappBotService
     protected $evolutionApi;
 
     protected $assistantName;
+
     protected $clinicName;
 
     // Estados del bot
@@ -494,7 +495,7 @@ class WhatsappBotService
         $reply .= "Cuéntame, ¿para qué *fecha* te gustaría programar tu visita?\n\n";
         $reply .= "📝 _Formato: DD/MM/AAAA_\n";
         $reply .= "📌 _Ejemplo: 15/12/2026_\n\n";
-        
+
         $clinicaHorario = Configuration::get('clinica_horario');
         if ($clinicaHorario) {
             $reply .= "⏰ *Horario de atención:* {$clinicaHorario}";
@@ -826,10 +827,10 @@ class WhatsappBotService
 
             $msg .= "\n💰 *TOTAL PENDIENTE: S/ {$total}*\n\n";
             $msg .= "💳 *Métodos de pago:*\n";
-            if (!empty($yapePlin) && $yapePlin !== 'No configurado') {
+            if (! empty($yapePlin) && $yapePlin !== 'No configurado') {
                 $msg .= "• Yape/Plin: {$yapePlin}\n";
             }
-            if (!empty($transferencia) && $transferencia !== 'No configurado') {
+            if (! empty($transferencia) && $transferencia !== 'No configurado') {
                 $msg .= "• Transferencia:\n{$transferencia}\n";
             }
             $msg .= "• Pago en clínica: Efectivo o tarjeta\n\n";
@@ -1603,10 +1604,10 @@ class WhatsappBotService
                 $msg .= "• {$payment->description} - S/ {$payment->amount} (Vence: ".Carbon::parse($payment->due_date)->format('d/m/Y').")\n";
             }
             $msg .= "\n💡 *Métodos de pago:*\n";
-            if (!empty($yapePlin) && $yapePlin !== 'No configurado') {
+            if (! empty($yapePlin) && $yapePlin !== 'No configurado') {
                 $msg .= "• Yape/Plin: {$yapePlin}\n";
             }
-            if (!empty($transferencia) && $transferencia !== 'No configurado') {
+            if (! empty($transferencia) && $transferencia !== 'No configurado') {
                 $msg .= "• Transferencia:\n{$transferencia}\n";
             }
             $msg .= "\nPara más información, escribe *9*. 👩‍💼";
