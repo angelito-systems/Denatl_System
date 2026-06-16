@@ -11,7 +11,7 @@ El proyecto ha sido optimizado y dockerizado para Windows. Se ha consolidado el 
 1. **Docker Desktop** instalado y en ejecución en la máquina de Windows.
 2. Permitir el tráfico en los puertos `80` y `8080` a través del Firewall de Windows (el script `install.ps1` realiza esto automáticamente).
 
-## Instalación Inicial
+## Instalación Iniciallko
 
 Para realizar la instalación inicial de todo el sistema, abre **PowerShell como Administrador** y ejecuta:
 
