@@ -26,43 +26,14 @@ use Illuminate\Support\Facades\Storage;
 
 class SunatService
 {
-    private See $see;
+    private ?See $seeInstance = null;
 
     private Company $company;
 
     public function __construct()
     {
-        $this->see = new See;
-
-        $environment = Configuration::get('sunat_environment') ?: 'demo';
-        $certPem = Configuration::get('sunat_cert_pem') ?: '';
         $ruc = Configuration::get('sunat_ruc') ?: '20000000000';
-        $user = Configuration::get('sunat_sol_user') ?: 'MODDATOS';
-        $pass = Configuration::get('sunat_sol_pass') ?: 'moddatos';
         $razonSocial = Configuration::get('sunat_razon_social') ?: 'MI CLINICA DENTAL SAC';
-
-        // ── Certificado y endpoint ────────────────────────────────────────────
-        if ($environment === 'demo' || ! $certPem) {
-            if (! $certPem) {
-                $certPath = storage_path('app/private/certificate.pem');
-                if (file_exists($certPath)) {
-                    $certPem = file_get_contents($certPath) ?: '';
-                } else {
-                    throw new Exception(
-                        "Certificado no encontrado en: {$certPath}. ".
-                            "Coloca 'certificate.pem' en storage/app/private/ o súbelo desde Configuración."
-                    );
-                }
-            }
-            $this->see->setService(SunatEndpoints::FE_BETA);
-        } else {
-            $this->see->setService(SunatEndpoints::FE_PRODUCCION);
-        }
-
-        if (! empty($certPem)) {
-            $this->see->setCertificate($certPem);
-        }
-        $this->see->setClaveSOL($ruc, $user, $pass);
 
         // ── Empresa emisora ───────────────────────────────────────────────────
         $address = (new Address)
@@ -77,6 +48,46 @@ class SunatService
             ->setRazonSocial($razonSocial)
             ->setNombreComercial(Configuration::get('clinica_nombre') ?: 'Clínica Dental')
             ->setAddress($address);
+    }
+
+    private function getSee(): See
+    {
+        if ($this->seeInstance !== null) {
+            return $this->seeInstance;
+        }
+
+        $this->seeInstance = new See;
+
+        $environment = Configuration::get('sunat_environment') ?: 'demo';
+        $certPem = Configuration::get('sunat_cert_pem') ?: '';
+        $ruc = Configuration::get('sunat_ruc') ?: '20000000000';
+        $user = Configuration::get('sunat_sol_user') ?: 'MODDATOS';
+        $pass = Configuration::get('sunat_sol_pass') ?: 'moddatos';
+
+        // ── Certificado y endpoint ────────────────────────────────────────────
+        if ($environment === 'demo' || ! $certPem) {
+            if (! $certPem) {
+                $certPath = storage_path('app/private/certificate.pem');
+                if (file_exists($certPath)) {
+                    $certPem = file_get_contents($certPath) ?: '';
+                } else {
+                    throw new Exception(
+                        "Certificado no encontrado en: {$certPath}. ".
+                            "Coloca 'certificate.pem' en storage/app/private/ o súbelo desde Configuración."
+                    );
+                }
+            }
+            $this->seeInstance->setService(SunatEndpoints::FE_BETA);
+        } else {
+            $this->seeInstance->setService(SunatEndpoints::FE_PRODUCCION);
+        }
+
+        if (! empty($certPem)) {
+            $this->seeInstance->setCertificate($certPem);
+        }
+        $this->seeInstance->setClaveSOL($ruc, $user, $pass);
+
+        return $this->seeInstance;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -236,13 +247,13 @@ class SunatService
         $serie = $invoice->getSerie();
         $correlativo = $invoice->getCorrelativo();
 
-        $result = $this->see->send($invoice);
+        $result = $this->getSee()->send($invoice);
 
         $payment->sunat_serie = $serie;
         $payment->sunat_correlativo = $correlativo;
 
         // ── XML firmado ───────────────────────────────────────────────────────
-        $xmlSigned = $this->see->getFactory()->getLastXml();
+        $xmlSigned = $this->getSee()->getFactory()->getLastXml();
         $xmlName = $invoice->getName().'.xml';
         Storage::disk('public')->put('sunat/'.$xmlName, $xmlSigned);
         $payment->sunat_xml_path = 'sunat/'.$xmlName;
@@ -281,12 +292,12 @@ class SunatService
         string $descMotivo = 'ANULACIÓN DE OPERACIÓN'
     ): Payment {
         $note = $this->buildNotaCredito($payment, $serieRef, $correlativoRef, $tipoDocRef, $codMotivo, $descMotivo);
-        $result = $this->see->send($note);
+        $result = $this->getSee()->send($note);
 
         $payment->sunat_serie = $note->getSerie();
         $payment->sunat_correlativo = $note->getCorrelativo();
 
-        $xmlSigned = $this->see->getFactory()->getLastXml();
+        $xmlSigned = $this->getSee()->getFactory()->getLastXml();
         $xmlName = $note->getName().'.xml';
         Storage::disk('public')->put('sunat/'.$xmlName, $xmlSigned);
         $payment->sunat_xml_path = 'sunat/'.$xmlName;
@@ -338,11 +349,15 @@ class SunatService
                 $hash = $this->extractHashFromXml($xmlContent);
             }
         } else {
-            try {
-                $xmlSigned = $this->see->getXmlSigned($doc);
-                $hash = $this->extractHashFromXml($xmlSigned);
-            } catch (\Throwable) {
+            if ($payment->receipt_type === 'Ticket' || Configuration::get('sunat_active') !== '1') {
                 $hash = '';
+            } else {
+                try {
+                    $xmlSigned = $this->getSee()->getXmlSigned($doc);
+                    $hash = $this->extractHashFromXml($xmlSigned);
+                } catch (\Throwable) {
+                    $hash = '';
+                }
             }
         }
 
