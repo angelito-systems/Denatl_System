@@ -645,13 +645,6 @@
                             placeholder="opcional"
                         />
                     </div>
-                    <div class="space-y-2">
-                        <Label>Nombre del Asistente Virtual</Label>
-                        <Input
-                            bind:value={form.settings.whatsapp_bot_name}
-                            placeholder="Ej. Dra. Valentina"
-                        />
-                    </div>
                 </div>
 
                 <div class="border-t pt-4">
@@ -756,6 +749,11 @@
                 </div>
             </CardHeader>
             <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2 md:col-span-2">
+                    <Label>Nombre del Asistente Virtual</Label>
+                    <Input bind:value={form.settings.whatsapp_bot_name} placeholder="Ej. Dra. Valentina" />
+                    <p class="text-xs text-muted-foreground">Este es el nombre con el que el Bot se presentará a tus pacientes.</p>
+                </div>
                 <div class="space-y-2">
                     <Label>Primer Recordatorio (Ej. 24 horas antes)</Label>
                     <div class="flex gap-2">
