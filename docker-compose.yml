@@ -9,10 +9,6 @@ services:
         container_name: dental_system_app
         restart: always
         environment:
-            - DB_HOST=mysql
-            - DB_DATABASE=${DB_DATABASE:-system_dental}
-            - DB_USERNAME=${DB_USERNAME:-root}
-            - DB_PASSWORD=${DB_PASSWORD:-root}
             # Rutas internas para Laravel PDF (Spatie Browsershot)
             - BROWSERSHOT_NODE_BIN=/usr/bin/node
             - BROWSERSHOT_NPM_BIN=/usr/bin/npm
