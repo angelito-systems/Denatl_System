@@ -26,14 +26,43 @@ use Illuminate\Support\Facades\Storage;
 
 class SunatService
 {
-    private ?See $seeInstance = null;
+    private See $see;
 
     private Company $company;
 
     public function __construct()
     {
+        $this->see = new See;
+
+        $environment = Configuration::get('sunat_environment') ?: 'demo';
+        $certPem = Configuration::get('sunat_cert_pem') ?: '';
         $ruc = Configuration::get('sunat_ruc') ?: '20000000000';
+        $user = Configuration::get('sunat_sol_user') ?: 'MODDATOS';
+        $pass = Configuration::get('sunat_sol_pass') ?: 'moddatos';
         $razonSocial = Configuration::get('sunat_razon_social') ?: 'MI CLINICA DENTAL SAC';
+
+        // ── Certificado y endpoint ────────────────────────────────────────────
+        if ($environment === 'demo' || ! $certPem) {
+            if (! $certPem) {
+                $certPath = storage_path('app/private/certificate.pem');
+                if (file_exists($certPath)) {
+                    $certPem = file_get_contents($certPath) ?: '';
+                } else {
+                    throw new Exception(
+                        "Certificado no encontrado en: {$certPath}. " .
+                            "Coloca 'certificate.pem' en storage/app/private/ o súbelo desde Configuración."
+                    );
+                }
+            }
+            $this->see->setService(SunatEndpoints::FE_BETA);
+        } else {
+            $this->see->setService(SunatEndpoints::FE_PRODUCCION);
+        }
+
+        if (! empty($certPem)) {
+            $this->see->setCertificate($certPem);
+        }
+        $this->see->setClaveSOL($ruc, $user, $pass);
 
         // ── Empresa emisora ───────────────────────────────────────────────────
         $address = (new Address)
@@ -48,46 +77,6 @@ class SunatService
             ->setRazonSocial($razonSocial)
             ->setNombreComercial(Configuration::get('clinica_nombre') ?: 'Clínica Dental')
             ->setAddress($address);
-    }
-
-    private function getSee(): See
-    {
-        if ($this->seeInstance !== null) {
-            return $this->seeInstance;
-        }
-
-        $this->seeInstance = new See;
-
-        $environment = Configuration::get('sunat_environment') ?: 'demo';
-        $certPem = Configuration::get('sunat_cert_pem') ?: '';
-        $ruc = Configuration::get('sunat_ruc') ?: '20000000000';
-        $user = Configuration::get('sunat_sol_user') ?: 'MODDATOS';
-        $pass = Configuration::get('sunat_sol_pass') ?: 'moddatos';
-
-        // ── Certificado y endpoint ────────────────────────────────────────────
-        if ($environment === 'demo' || ! $certPem) {
-            if (! $certPem) {
-                $certPath = storage_path('app/private/certificate.pem');
-                if (file_exists($certPath)) {
-                    $certPem = file_get_contents($certPath) ?: '';
-                } else {
-                    throw new Exception(
-                        "Certificado no encontrado en: {$certPath}. ".
-                            "Coloca 'certificate.pem' en storage/app/private/ o súbelo desde Configuración."
-                    );
-                }
-            }
-            $this->seeInstance->setService(SunatEndpoints::FE_BETA);
-        } else {
-            $this->seeInstance->setService(SunatEndpoints::FE_PRODUCCION);
-        }
-
-        if (! empty($certPem)) {
-            $this->seeInstance->setCertificate($certPem);
-        }
-        $this->seeInstance->setClaveSOL($ruc, $user, $pass);
-
-        return $this->seeInstance;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -247,21 +236,21 @@ class SunatService
         $serie = $invoice->getSerie();
         $correlativo = $invoice->getCorrelativo();
 
-        $result = $this->getSee()->send($invoice);
+        $result = $this->see->send($invoice);
 
         $payment->sunat_serie = $serie;
         $payment->sunat_correlativo = $correlativo;
 
         // ── XML firmado ───────────────────────────────────────────────────────
-        $xmlSigned = $this->getSee()->getFactory()->getLastXml();
-        $xmlName = $invoice->getName().'.xml';
-        Storage::disk('public')->put('sunat/'.$xmlName, $xmlSigned);
-        $payment->sunat_xml_path = 'sunat/'.$xmlName;
+        $xmlSigned = $this->see->getFactory()->getLastXml();
+        $xmlName = $invoice->getName() . '.xml';
+        Storage::disk('public')->put('sunat/' . $xmlName, $xmlSigned);
+        $payment->sunat_xml_path = 'sunat/' . $xmlName;
         $payment->sunat_hash = $this->extractHashFromXml($xmlSigned);
 
         if (! $result->isSuccess()) {
             $payment->sunat_status = 'Rechazado';
-            $payment->sunat_message = $result->getError()->getCode().' - '.$result->getError()->getMessage();
+            $payment->sunat_message = $result->getError()->getCode() . ' - ' . $result->getError()->getMessage();
             $payment->save();
             throw new Exception($payment->sunat_message);
         }
@@ -271,9 +260,9 @@ class SunatService
         $payment->sunat_message = $cdr->getDescription();
 
         // ── CDR ───────────────────────────────────────────────────────────────
-        $cdrName = 'R-'.$invoice->getName().'.zip';
-        Storage::disk('public')->put('sunat/'.$cdrName, $result->getCdrZip());
-        $payment->sunat_cdr_path = 'sunat/'.$cdrName;
+        $cdrName = 'R-' . $invoice->getName() . '.zip';
+        Storage::disk('public')->put('sunat/' . $cdrName, $result->getCdrZip());
+        $payment->sunat_cdr_path = 'sunat/' . $cdrName;
 
         $payment->save();
 
@@ -292,20 +281,20 @@ class SunatService
         string $descMotivo = 'ANULACIÓN DE OPERACIÓN'
     ): Payment {
         $note = $this->buildNotaCredito($payment, $serieRef, $correlativoRef, $tipoDocRef, $codMotivo, $descMotivo);
-        $result = $this->getSee()->send($note);
+        $result = $this->see->send($note);
 
         $payment->sunat_serie = $note->getSerie();
         $payment->sunat_correlativo = $note->getCorrelativo();
 
-        $xmlSigned = $this->getSee()->getFactory()->getLastXml();
-        $xmlName = $note->getName().'.xml';
-        Storage::disk('public')->put('sunat/'.$xmlName, $xmlSigned);
-        $payment->sunat_xml_path = 'sunat/'.$xmlName;
+        $xmlSigned = $this->see->getFactory()->getLastXml();
+        $xmlName = $note->getName() . '.xml';
+        Storage::disk('public')->put('sunat/' . $xmlName, $xmlSigned);
+        $payment->sunat_xml_path = 'sunat/' . $xmlName;
         $payment->sunat_hash = $this->extractHashFromXml($xmlSigned);
 
         if (! $result->isSuccess()) {
             $payment->sunat_status = 'Rechazado';
-            $payment->sunat_message = $result->getError()->getCode().' - '.$result->getError()->getMessage();
+            $payment->sunat_message = $result->getError()->getCode() . ' - ' . $result->getError()->getMessage();
             $payment->save();
             throw new Exception($payment->sunat_message);
         }
@@ -314,9 +303,9 @@ class SunatService
         $payment->sunat_status = $cdr->isAccepted() ? 'Aceptado' : 'Rechazado';
         $payment->sunat_message = $cdr->getDescription();
 
-        $cdrName = 'R-'.$note->getName().'.zip';
-        Storage::disk('public')->put('sunat/'.$cdrName, $result->getCdrZip());
-        $payment->sunat_cdr_path = 'sunat/'.$cdrName;
+        $cdrName = 'R-' . $note->getName() . '.zip';
+        Storage::disk('public')->put('sunat/' . $cdrName, $result->getCdrZip());
+        $payment->sunat_cdr_path = 'sunat/' . $cdrName;
 
         $payment->save();
 
@@ -349,15 +338,11 @@ class SunatService
                 $hash = $this->extractHashFromXml($xmlContent);
             }
         } else {
-            if ($payment->receipt_type === 'Ticket' || Configuration::get('sunat_active') !== '1') {
+            try {
+                $xmlSigned = $this->see->getXmlSigned($doc);
+                $hash = $this->extractHashFromXml($xmlSigned);
+            } catch (\Throwable) {
                 $hash = '';
-            } else {
-                try {
-                    $xmlSigned = $this->getSee()->getXmlSigned($doc);
-                    $hash = $this->extractHashFromXml($xmlSigned);
-                } catch (\Throwable) {
-                    $hash = '';
-                }
             }
         }
 
@@ -365,7 +350,7 @@ class SunatService
         if ($payment->treatment_contract_id) {
             $contract = TreatmentContract::find($payment->treatment_contract_id);
             if ($contract) {
-                $extras[] = ['name' => 'Saldo Pendiente', 'value' => 'S/ '.number_format($contract->balance_due, 2)];
+                $extras[] = ['name' => 'Saldo Pendiente', 'value' => 'S/ ' . number_format($contract->balance_due, 2)];
                 $extras[] = ['name' => 'Tratamiento', 'value' => $contract->treatment_name];
             }
         }
@@ -375,7 +360,7 @@ class SunatService
             // Logo desde configuración (storage/public) con fallback a public/images/logo.png
             $logoStoragePath = Configuration::get('logo_path');
             $logoFsPath = $logoStoragePath
-                ? storage_path('app/public/'.$logoStoragePath)
+                ? storage_path('app/public/' . $logoStoragePath)
                 : public_path('images/logo.png');
             $logo = file_exists($logoFsPath) ? base64_encode(file_get_contents($logoFsPath)) : '';
 
@@ -428,7 +413,7 @@ class SunatService
                 'hash' => $hash,
             ],
             'user' => [
-                'header' => 'Telf: '.Configuration::get('clinica_telefono') ?: '',
+                'header' => 'Telf: ' . Configuration::get('clinica_telefono') ?: '',
                 'extras' => $extras,
                 'footer' => '',
             ],
@@ -452,7 +437,7 @@ class SunatService
                 ->setNumDoc($payment->billing_document ?: '00000000')
                 ->setRznSocial(
                     $payment->billing_name
-                        ?: ($payment->patient->first_name.' '.$payment->patient->last_name)
+                        ?: ($payment->patient->first_name . ' ' . $payment->patient->last_name)
                 );
         }
 
