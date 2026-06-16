@@ -89,12 +89,13 @@ class WhatsAppService
             return;
         }
 
-        $clinica = 'Clínica Dental System';
+        $clinica = Configuration::get('clinica_nombre', 'Clínica Dental System');
+        $botName = Configuration::get('whatsapp_bot_name', 'Asistente Virtual');
         $fecha = Carbon::parse($cita->date)->format('d/m/Y');
         $hora = Carbon::parse($cita->start_time)->format('H:i');
 
         $mensaje = "¡Hola {$cita->patient->first_name}! 👋\n\n";
-        $mensaje .= "Te escribimos de *{$clinica}* para recordarte tu próxima cita:\n\n";
+        $mensaje .= "Soy *{$botName}*, de *{$clinica}*. Te escribo para recordarte tu próxima cita:\n\n";
         $mensaje .= "📅 *Fecha:* {$fecha}\n";
         $mensaje .= "⏰ *Hora:* {$hora}\n";
         $mensaje .= "🦷 *Tratamiento:* {$cita->treatment}\n\n";
@@ -113,12 +114,13 @@ class WhatsAppService
             return;
         }
 
-        $clinica = 'Clínica Dental System';
+        $clinica = Configuration::get('clinica_nombre', 'Clínica Dental System');
+        $botName = Configuration::get('whatsapp_bot_name', 'Asistente Virtual');
         $fecha = Carbon::parse($cita->date)->format('d/m/Y');
         $hora = Carbon::parse($cita->start_time)->format('H:i');
 
         $mensaje = "¡Hola {$cita->patient->first_name}! ✅\n\n";
-        $mensaje .= "Tu cita en *{$clinica}* ha sido *CONFIRMADA*.\n\n";
+        $mensaje .= "Soy *{$botName}*. Tu cita en *{$clinica}* ha sido *CONFIRMADA*.\n\n";
         $mensaje .= "📅 *Fecha:* {$fecha}\n";
         $mensaje .= "⏰ *Hora:* {$hora}\n";
         $mensaje .= "🦷 *Tratamiento:* {$cita->treatment}\n\n";
@@ -136,10 +138,11 @@ class WhatsAppService
             return;
         }
 
-        $clinica = 'Clínica Dental System';
+        $clinica = Configuration::get('clinica_nombre', 'Clínica Dental System');
+        $botName = Configuration::get('whatsapp_bot_name', 'Asistente Virtual');
 
         $mensaje = "¡Hola {$cita->patient->first_name}! ❌\n\n";
-        $mensaje .= "Te informamos que tu cita para el tratamiento de *{$cita->treatment}* en *{$clinica}* ha sido *CANCELADA*.\n\n";
+        $mensaje .= "Soy *{$botName}*. Te informamos que tu cita para el tratamiento de *{$cita->treatment}* en *{$clinica}* ha sido *CANCELADA*.\n\n";
         $mensaje .= 'Si deseas reprogramar, por favor contáctanos respondiendo a este mensaje.';
 
         $this->enviarMensaje($cita->patient->phone, $mensaje);
@@ -154,12 +157,13 @@ class WhatsAppService
             return;
         }
 
-        $clinica = 'Clínica Dental System';
+        $clinica = Configuration::get('clinica_nombre', 'Clínica Dental System');
+        $botName = Configuration::get('whatsapp_bot_name', 'Asistente Virtual');
         $fecha = Carbon::parse($cita->date)->format('d/m/Y');
         $hora = Carbon::parse($cita->start_time)->format('H:i');
 
         $mensaje = "¡Hola {$cita->patient->first_name}! 🔄\n\n";
-        $mensaje .= "Tu cita en *{$clinica}* ha sido *REPROGRAMADA*. Estos son los nuevos datos:\n\n";
+        $mensaje .= "Soy *{$botName}*. Tu cita en *{$clinica}* ha sido *REPROGRAMADA*. Estos son los nuevos datos:\n\n";
         $mensaje .= "📅 *Nueva Fecha:* {$fecha}\n";
         $mensaje .= "⏰ *Nueva Hora:* {$hora}\n";
         $mensaje .= "🦷 *Tratamiento:* {$cita->treatment}\n\n";

@@ -58,8 +58,8 @@ class WhatsappBotService
     public function __construct(EvolutionApiService $evolutionApi)
     {
         $this->evolutionApi = $evolutionApi;
-        $this->assistantName = Configuration::get('whatsapp_bot_name', 'Dra. Valentina');
-        $this->clinicName = Configuration::get('clinica_nombre', 'Clínica Dental Sonrisa Perfecta');
+        $this->assistantName = Configuration::get('whatsapp_bot_name', 'Asistente Virtual');
+        $this->clinicName = Configuration::get('clinica_nombre', 'Clínica Dental System');
     }
 
     public function processMessage(Conversation $conversation, string $messageText)
@@ -330,10 +330,13 @@ class WhatsappBotService
         sleep(2);
 
         // Enviar mensaje de bienvenida con información útil
+        $clinicaTelefono = Configuration::get('clinica_telefono', 'No disponible');
+        $clinicaDireccion = Configuration::get('clinica_direccion', 'No disponible');
+
         $info = "📌 *INFORMACIÓN IMPORTANTE:*\n\n";
         $info .= "🕐 *Horario:* Lunes a Viernes 9:00 AM - 7:00 PM | Sábados 9:00 AM - 2:00 PM\n";
-        $info .= "📞 *Emergencias:* 999-888-777\n";
-        $info .= "🏥 *Dirección:* Av. Principal 456, Miraflores\n\n";
+        $info .= "📞 *Emergencias:* {$clinicaTelefono}\n";
+        $info .= "🏥 *Dirección:* {$clinicaDireccion}\n\n";
         $info .= "Recuerda que también te enviaré:\n";
         $info .= "✅ Recordatorios de tus citas\n";
         $info .= "🎂 Saludos de cumpleaños\n";
