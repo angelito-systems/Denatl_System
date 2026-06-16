@@ -28,7 +28,7 @@
     import { Toast } from '@/lib/utils/toast';
     import { Loader2 } from 'lucide-svelte';
 
-    let { treatments, filters } = $props();
+    const { treatments, categories = [], filters } = $props();
 
     let search = $state(filters?.search || '');
     let searchTimeout: ReturnType<typeof setTimeout>;
@@ -37,7 +37,7 @@
     const treatmentForm = useForm({
         id: null as number | null,
         name: '',
-        category: 'Ortodoncia',
+        treatment_category_id: categories.length > 0 ? categories[0].id : '',
         base_price: '',
         estimated_duration_minutes: '30',
         is_per_tooth: false
@@ -59,7 +59,7 @@
     function editTreatment(treatment: any) {
         treatmentForm.id = treatment.id;
         treatmentForm.name = treatment.name;
-        treatmentForm.category = treatment.category;
+        treatmentForm.treatment_category_id = treatment.treatment_category_id;
         treatmentForm.base_price = treatment.base_price;
         treatmentForm.estimated_duration_minutes = treatment.estimated_duration_minutes;
         treatmentForm.is_per_tooth = !!treatment.is_per_tooth;
@@ -116,9 +116,9 @@
     <div class="flex items-center gap-4 bg-card p-4 rounded-lg shadow-sm border">
         <div class="relative flex-1 max-w-md">
             <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-                type="text" 
-                placeholder="Buscar tratamiento o categoría..." 
+            <Input
+                type="text"
+                placeholder="Buscar tratamiento o categoría..."
                 class="pl-9"
                 bind:value={search}
                 oninput={handleSearch}
@@ -150,7 +150,7 @@
                             <TableCell class="font-medium">{treatment.name}</TableCell>
                             <TableCell>
                                 <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                    {treatment.category}
+                                    {treatment.treatment_category?.name || 'General'}
                                 </span>
                                 {#if treatment.is_per_tooth}
                                     <span class="ml-2 px-2 py-1 bg-emerald-100 text-emerald-800 text-xs rounded-full" title="Se cobra por cada pieza dental">
@@ -189,19 +189,15 @@
                 <Input type="text" bind:value={treatmentForm.name} required />
                 {#if treatmentForm.errors.name}<p class="text-xs text-red-500">{treatmentForm.errors.name}</p>{/if}
             </div>
-            
+
             <div class="space-y-2">
                 <Label>Categoría *</Label>
-                <select class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" bind:value={treatmentForm.category} required>
-                    <option value="Ortodoncia">Ortodoncia</option>
-                    <option value="Implantes">Implantes</option>
-                    <option value="Endodoncia">Endodoncia</option>
-                    <option value="Odontopediatría">Odontopediatría</option>
-                    <option value="Estética">Estética</option>
-                    <option value="Rehabilitación">Rehabilitación</option>
-                    <option value="General">General</option>
+                <select class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" bind:value={treatmentForm.treatment_category_id} required>
+                    {#each categories as category}
+                        <option value={category.id}>{category.name}</option>
+                    {/each}
                 </select>
-                {#if treatmentForm.errors.category}<p class="text-xs text-red-500">{treatmentForm.errors.category}</p>{/if}
+                {#if treatmentForm.errors.treatment_category_id}<p class="text-xs text-red-500">{treatmentForm.errors.treatment_category_id}</p>{/if}
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -221,7 +217,7 @@
                 <Label>Modalidad de Cobro *</Label>
                 <select class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" bind:value={treatmentForm.is_per_tooth}>
                     <option value={false}>Cobro Único / General</option>
-                    <option value={true}>Se cobra por Diente (Cantidad)</option>
+                    <option value={true}>Se cobra por pieza dental (Cantidad)</option>
                 </select>
             </div>
 

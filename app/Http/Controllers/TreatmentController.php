@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTreatmentRequest;
 use App\Http\Requests\UpdateTreatmentRequest;
 use App\Models\Treatment;
+use App\Models\TreatmentCategory;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -15,17 +16,21 @@ class TreatmentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Treatment::query();
+        $query = Treatment::with('treatmentCategory');
         if ($request->has('search') && $request->input('search') !== '') {
             $search = $request->input('search');
             $query->where('name', 'like', "%{$search}%")
-                ->orWhere('category', 'like', "%{$search}%");
+                ->orWhereHas('treatmentCategory', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%");
+                });
         }
 
-        $treatments = $query->orderBy('category')->orderBy('name')->paginate(15)->withQueryString();
+        $treatments = $query->orderBy('name')->paginate(15)->withQueryString();
+        $categories = TreatmentCategory::orderBy('name')->get();
 
         return Inertia::render('Treatments/Index', [
             'treatments' => $treatments,
+            'categories' => $categories,
             'filters' => $request->only(['search']),
         ]);
     }

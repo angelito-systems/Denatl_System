@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -16,15 +17,15 @@ return new class extends Migration
         });
 
         // Migrate data
-        $categories = \Illuminate\Support\Facades\DB::table('treatments')->select('category')->distinct()->pluck('category');
+        $categories = DB::table('treatments')->select('category')->distinct()->pluck('category');
         foreach ($categories as $categoryName) {
             if ($categoryName) {
-                $categoryId = \Illuminate\Support\Facades\DB::table('treatment_categories')->insertGetId([
+                $categoryId = DB::table('treatment_categories')->insertGetId([
                     'name' => $categoryName,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-                \Illuminate\Support\Facades\DB::table('treatments')->where('category', $categoryName)->update(['treatment_category_id' => $categoryId]);
+                DB::table('treatments')->where('category', $categoryName)->update(['treatment_category_id' => $categoryId]);
             }
         }
 
@@ -43,12 +44,12 @@ return new class extends Migration
         });
 
         // Restore data (roughly)
-        $treatments = \Illuminate\Support\Facades\DB::table('treatments')->get();
+        $treatments = DB::table('treatments')->get();
         foreach ($treatments as $treatment) {
             if ($treatment->treatment_category_id) {
-                $category = \Illuminate\Support\Facades\DB::table('treatment_categories')->where('id', $treatment->treatment_category_id)->first();
+                $category = DB::table('treatment_categories')->where('id', $treatment->treatment_category_id)->first();
                 if ($category) {
-                    \Illuminate\Support\Facades\DB::table('treatments')->where('id', $treatment->id)->update(['category' => $category->name]);
+                    DB::table('treatments')->where('id', $treatment->id)->update(['category' => $category->name]);
                 }
             }
         }

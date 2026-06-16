@@ -77,6 +77,12 @@
                     icon: ClipboardList,
                     permissions: ['ver_contratos'],
                 },
+                {
+                    title: 'Categorías',
+                    href: '/treatment-categories',
+                    icon: ClipboardList,
+                    permissions: ['ver_contratos'],
+                },
             ],
         },
         {

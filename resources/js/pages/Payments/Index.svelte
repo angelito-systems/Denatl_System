@@ -30,6 +30,7 @@
     import { QZTrayService, type TicketData } from '@/lib/utils/qztray';
     import PdfViewerModal from '@/components/PdfViewerModal.svelte';
     import SendWhatsappButton from '@/components/SendWhatsappButton.svelte';
+    import SearchableSelect from '@/components/SearchableSelect.svelte';
 
     let { payments, patients, treatments, filters } = $props();
 
@@ -44,7 +45,7 @@
     // Payment Form Modal State
     let isPaymentModalOpen = $state(false);
     let sunatActive = $derived(page.props.sunatConfig?.active ?? false);
-    
+
     let teethQuantity = $state(1);
 
     const paymentForm = useForm({
@@ -73,8 +74,8 @@
         patients.filter(p => {
             if (!patientSearchQuery) return true;
             const q = patientSearchQuery.toLowerCase();
-            return (p.first_name?.toLowerCase().includes(q) || 
-                    p.last_name?.toLowerCase().includes(q) || 
+            return (p.first_name?.toLowerCase().includes(q) ||
+                    p.last_name?.toLowerCase().includes(q) ||
                     p.dni?.includes(q) ||
                     p.phone?.includes(q));
         })
@@ -135,7 +136,7 @@
     function recalculateTreatmentAmount(treatment: any, qty: number) {
         const total = (Number(treatment.base_price) || 0) * qty;
         paymentForm.amount = total.toString();
-        paymentForm.notes = treatment.is_per_tooth 
+        paymentForm.notes = treatment.is_per_tooth
             ? `Pago por tratamiento: ${treatment.name} (${qty} ${qty === 1 ? 'diente' : 'dientes'})`
             : `Pago por tratamiento: ${treatment.name}`;
     }
@@ -257,7 +258,7 @@
 
     function submitPayment(e: Event) {
         e.preventDefault();
-        
+
         if (paymentForm.id) {
             paymentForm.put(`/payments/${paymentForm.id}`, {
                 preserveScroll: true,
@@ -328,9 +329,9 @@
     <div class="flex items-center gap-4 bg-card p-4 rounded-lg shadow-sm border">
         <div class="relative flex-1 max-w-md">
             <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-                type="text" 
-                placeholder="Buscar por paciente o nota..." 
+            <Input
+                type="text"
+                placeholder="Buscar por paciente o nota..."
                 class="pl-9"
                 bind:value={search}
                 oninput={handleSearch}
@@ -407,9 +408,9 @@
                                      <Button variant="ghost" size="icon" class="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50" onclick={() => openEditModal(payment)} title="Editar Pago">
                                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                      </Button>
-                                     <SendWhatsappButton 
-                                         phone={payment.patient?.phone} 
-                                        payment_id={payment.id} 
+                                     <SendWhatsappButton
+                                         phone={payment.patient?.phone}
+                                        payment_id={payment.id}
                                         type="payment"
                                         plantilla="pago_confirmado"
                                         buttonText=""
@@ -457,7 +458,7 @@
 
 <!-- Modal Registrar Pago -->
 <Dialog bind:open={isPaymentModalOpen}>
-    <DialogContent class="sm:max-w-lg">
+    <DialogContent class="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
             <DialogTitle>{paymentForm.id ? 'Editar Pago' : 'Registrar Nuevo Pago'}</DialogTitle>
             <DialogDescription>
@@ -469,9 +470,9 @@
                 <div class="space-y-2 relative">
                     <Label>Paciente</Label>
                     <div class="relative">
-                        <Input 
-                            type="text" 
-                            placeholder="Buscar por nombre, DNI o número..." 
+                        <Input
+                            type="text"
+                            placeholder="Buscar por nombre, DNI o número..."
                             bind:value={patientSearchQuery}
                             class="h-11 rounded-xl pr-8"
                             onfocus={() => showPatientDropdown = true}
@@ -489,11 +490,11 @@
                                 <div class="p-3 text-sm text-gray-500 text-center">No se encontraron pacientes.</div>
                             {:else}
                                 {#each filteredPatients as pt}
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         class="w-full text-left px-4 py-2.5 text-sm hover:bg-accent hover:text-accent-foreground flex flex-col"
-                                        onclick={() => { 
-                                            paymentForm.patient_id = pt.id.toString(); 
+                                        onclick={() => {
+                                            paymentForm.patient_id = pt.id.toString();
                                             patientSearchQuery = `${pt.first_name} ${pt.last_name} (${pt.dni})`;
                                             showPatientDropdown = false;
                                         }}
@@ -509,131 +510,111 @@
                 </div>
 
                 {#if selectedPatientDetails?.treatment_contracts && selectedPatientDetails.treatment_contracts.length > 0}
-                    <div class="space-y-2 bg-blue-50 p-4 rounded-xl border border-blue-100">
-                        <Label class="text-blue-800">Contratos Activos del Paciente</Label>
-                        <Select 
-                            type="single" 
+                    <div class="p-4 rounded-xl border border-blue-100 bg-blue-50/50">
+                        <SearchableSelect
+                            label="Contratos Activos del Paciente"
+                            placeholder="Buscar contrato..."
                             bind:value={paymentForm.treatment_contract_id}
-                            onValueChange={onContractChange}
-                        >
-                            <SelectTrigger class="h-11 rounded-xl bg-white">
-                                {#if paymentForm.treatment_contract_id && paymentForm.treatment_contract_id !== 'none'}
-                                    {@const c = selectedPatientDetails.treatment_contracts.find((ct: any) => ct.id.toString() === paymentForm.treatment_contract_id.toString())}
-                                    {c ? `${c.treatment_name} (Deuda: S/ ${c.balance_due})` : 'Seleccionar contrato...'}
-                                {:else}
-                                    Pago Libre (Sin Contrato)
-                                {/if}
-                            </SelectTrigger>
-                            <SelectContent class="rounded-xl">
-                                <SelectItem value="none" class="rounded-lg">Pago Libre (Sin Contrato)</SelectItem>
-                                {#each selectedPatientDetails.treatment_contracts as contract}
-                                    <SelectItem value={contract.id.toString()} class="rounded-lg">
-                                        {contract.treatment_name} (Deuda: S/ {contract.balance_due})
-                                    </SelectItem>
-                                {/each}
-                            </SelectContent>
-                        </Select>
-                        <p class="text-xs text-blue-600/80">Selecciona si el pago abonará a un tratamiento financiado.</p>
+                            options={[
+                                { value: 'none', label: 'Pago Libre (Sin Contrato)' },
+                                ...selectedPatientDetails.treatment_contracts.map(c => ({
+                                    value: c.id,
+                                    label: c.treatment_name,
+                                    description: `Deuda: S/ ${c.balance_due}`
+                                }))
+                            ]}
+                            onChange={onContractChange}
+                        />
+                        <p class="text-xs text-blue-600/80 mt-2">Selecciona si el pago abonará a un tratamiento financiado.</p>
                     </div>
                 {/if}
 
                 {#if !paymentForm.treatment_contract_id || paymentForm.treatment_contract_id === 'none'}
-                    <div class="space-y-4 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                        <div class="space-y-2">
-                            <Label class="text-emerald-800">Tratamiento Directo (Opcional)</Label>
-                            <Select 
-                                type="single" 
+                    <div class="space-y-4 p-4 rounded-xl border border-emerald-100 bg-emerald-50/50">
+                        <div>
+                            <SearchableSelect
+                                label="Tratamiento Directo (Opcional)"
+                                placeholder="Buscar tratamiento..."
                                 bind:value={paymentForm.treatment_id}
-                                onValueChange={onTreatmentChange}
-                            >
-                                <SelectTrigger class="h-11 rounded-xl bg-white">
-                                    {#if paymentForm.treatment_id && paymentForm.treatment_id !== 'none'}
-                                        {@const t = treatments?.find((tr: any) => tr.id.toString() === paymentForm.treatment_id.toString())}
-                                        {t ? `${t.name} (S/ ${t.base_price})` : 'Seleccionar tratamiento...'}
-                                    {:else}
-                                        Ninguno / Otro
-                                    {/if}
-                                </SelectTrigger>
-                                <SelectContent class="rounded-xl">
-                                    <SelectItem value="none" class="rounded-lg">Ninguno / Otro</SelectItem>
-                                    {#if treatments && treatments.length > 0}
-                                        {#each treatments as treatment}
-                                            <SelectItem value={treatment.id.toString()} class="rounded-lg">
-                                                {treatment.name} (Precio base: S/ {treatment.base_price})
-                                            </SelectItem>
-                                        {/each}
-                                    {/if}
-                                </SelectContent>
-                            </Select>
-                            <p class="text-xs text-emerald-600/80">Selecciona un tratamiento si el pago no es por un contrato y deseas aplicar su precio base.</p>
+                                options={[
+                                    { value: 'none', label: 'Ninguno / Otro' },
+                                    ...(treatments || []).map(t => ({
+                                        value: t.id,
+                                        label: t.name,
+                                        description: `Precio base: S/ ${t.base_price}`
+                                    }))
+                                ]}
+                                onChange={onTreatmentChange}
+                            />
+                            <p class="text-xs text-emerald-600/80 mt-2">Selecciona un tratamiento si el pago no es por un contrato y deseas aplicar su precio base.</p>
                         </div>
 
                         {#if paymentForm.treatment_id && paymentForm.treatment_id !== 'none'}
                             {@const selectedT = treatments?.find((tr: any) => tr.id.toString() === paymentForm.treatment_id.toString())}
                             {#if selectedT?.is_per_tooth}
                                 <div class="space-y-2 pt-2 border-t border-emerald-200/50">
-                                    <Label class="text-emerald-800">Cantidad de Dientes</Label>
-                                    <Input 
-                                        type="number" 
-                                        min="1" 
-                                        max="32" 
-                                        bind:value={teethQuantity} 
+                                    <Label class="text-emerald-800">Cantidad de piezas dental</Label>
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        max="32"
+                                        bind:value={teethQuantity}
                                         oninput={onTeethQuantityChange}
-                                        class="h-11 rounded-xl bg-white w-full sm:w-1/3" 
+                                        class="h-11 rounded-xl bg-white w-full sm:w-1/3"
                                     />
-                                    <p class="text-xs text-emerald-600/80">Este tratamiento se cobra por diente. El precio se multiplicará por esta cantidad.</p>
+                                    <p class="text-xs text-emerald-600/80">Este tratamiento se cobra por pienza dental. El precio se multiplicará por esta cantidad.</p>
                                 </div>
                             {/if}
                         {/if}
                     </div>
                 {/if}
-                
+
                 <div class="grid grid-cols-2 gap-5">
                     <div class="space-y-2">
                         <Label>Monto (S/)</Label>
                         <Input type="number" step="0.01" min="0" bind:value={paymentForm.amount} placeholder="0.00" class="h-11 rounded-xl" />
                         {#if paymentForm.errors.amount}<p class="text-xs text-red-500">{paymentForm.errors.amount}</p>{/if}
                     </div>
-                    <div class="space-y-2">
-                        <Label>Método de Pago</Label>
-                        <Select bind:value={paymentForm.payment_method} type="single">
-                            <SelectTrigger class="h-11 rounded-xl">{paymentForm.payment_method}</SelectTrigger>
-                            <SelectContent class="rounded-xl">
-                                <SelectItem value="Efectivo" class="rounded-lg">Efectivo</SelectItem>
-                                <SelectItem value="Tarjeta" class="rounded-lg">Tarjeta</SelectItem>
-                                <SelectItem value="Transferencia" class="rounded-lg">Transferencia</SelectItem>
-                                <SelectItem value="Yape/Plin" class="rounded-lg">Yape/Plin</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        {#if paymentForm.errors.payment_method}<p class="text-xs text-red-500">{paymentForm.errors.payment_method}</p>{/if}
+                    <div>
+                        <SearchableSelect
+                            label="Método de Pago"
+                            bind:value={paymentForm.payment_method}
+                            error={paymentForm.errors.payment_method}
+                            options={[
+                                { value: 'Efectivo', label: 'Efectivo' },
+                                { value: 'Tarjeta', label: 'Tarjeta' },
+                                { value: 'Transferencia', label: 'Transferencia' },
+                                { value: 'Yape/Plin', label: 'Yape/Plin' }
+                            ]}
+                        />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-5">
-                    <div class="space-y-2">
-                        <Label>Tipo Comprobante</Label>
-                        <Select bind:value={paymentForm.receipt_type} type="single">
-                            <SelectTrigger class="h-11 rounded-xl">{paymentForm.receipt_type}</SelectTrigger>
-                            <SelectContent class="rounded-xl">
-                                {#if sunatActive}
-                                    <SelectItem value="Boleta" class="rounded-lg">Boleta</SelectItem>
-                                    <SelectItem value="Factura" class="rounded-lg">Factura</SelectItem>
-                                {/if}
-                                <SelectItem value="Ticket" class="rounded-lg">Ticket (Interno)</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        {#if paymentForm.errors.receipt_type}<p class="text-xs text-red-500">{paymentForm.errors.receipt_type}</p>{/if}
+                    <div>
+                        <SearchableSelect
+                            label="Tipo Comprobante"
+                            bind:value={paymentForm.receipt_type}
+                            error={paymentForm.errors.receipt_type}
+                            options={[
+                                ...(sunatActive ? [
+                                    { value: 'Boleta', label: 'Boleta' },
+                                    { value: 'Factura', label: 'Factura' }
+                                ] : []),
+                                { value: 'Ticket', label: 'Ticket (Interno)' }
+                            ]}
+                        />
                     </div>
-                    <div class="space-y-2">
-                        <Label>Estado</Label>
-                        <Select bind:value={paymentForm.status} type="single">
-                            <SelectTrigger class="h-11 rounded-xl">{paymentForm.status}</SelectTrigger>
-                            <SelectContent class="rounded-xl">
-                                <SelectItem value="Pagado" class="rounded-lg">Pagado</SelectItem>
-                                <SelectItem value="Pendiente" class="rounded-lg">Pendiente</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        {#if paymentForm.errors.status}<p class="text-xs text-red-500">{paymentForm.errors.status}</p>{/if}
+                    <div>
+                        <SearchableSelect
+                            label="Estado"
+                            bind:value={paymentForm.status}
+                            error={paymentForm.errors.status}
+                            options={[
+                                { value: 'Pagado', label: 'Pagado' },
+                                { value: 'Pendiente', label: 'Pendiente' }
+                            ]}
+                        />
                     </div>
                 </div>
 
@@ -678,7 +659,7 @@
                 <Input type="text" bind:value={sunatForm.billing_name} placeholder="Nombre completo o Razón Social" required={selectedPaymentForSunat?.receipt_type === 'Factura'} />
                 {#if sunatForm.errors.billing_name}<p class="text-xs text-red-500">{sunatForm.errors.billing_name}</p>{/if}
             </div>
-            
+
             <div class="pt-4 flex justify-end gap-2">
                 <Button variant="outline" type="button" onclick={() => isSunatModalOpen = false}>Cancelar</Button>
                 <Button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white" disabled={sunatForm.processing}>
@@ -694,8 +675,8 @@
 </Dialog>
 
 <!-- Modal Visor de PDF Reutilizable -->
-<PdfViewerModal 
-    bind:isOpen={isPdfViewerOpen} 
-    url={pdfViewerUrl} 
-    title={pdfViewerTitle} 
+<PdfViewerModal
+    bind:isOpen={isPdfViewerOpen}
+    url={pdfViewerUrl}
+    title={pdfViewerTitle}
 />

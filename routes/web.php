@@ -20,6 +20,7 @@ use App\Http\Controllers\RatingController;
 use App\Http\Controllers\ReniecController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\TreatmentCategoryController;
 use App\Http\Controllers\TreatmentContractController;
 use App\Http\Controllers\TreatmentController;
 use App\Http\Controllers\UserController;
@@ -51,6 +52,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projector', [ProjectorController::class, 'index'])->name('projector.index');
     Route::get('/api/projector/state', [ProjectorController::class, 'state'])->name('projector.state');
     Route::resource('treatments', TreatmentController::class);
+    Route::resource('treatment-categories', TreatmentCategoryController::class);
     Route::resource('payments', PaymentController::class);
     // Administración y Marketing (Sólo Administrador)
     Route::middleware(['role:Administrador'])->group(function () {
