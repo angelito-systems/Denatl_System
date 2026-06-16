@@ -58,8 +58,8 @@ class WhatsappBotService
     public function __construct(EvolutionApiService $evolutionApi)
     {
         $this->evolutionApi = $evolutionApi;
-        $this->assistantName = Configuration::get('whatsapp_bot_name', 'Asistente Virtual');
-        $this->clinicName = Configuration::get('clinica_nombre', 'Clínica Dental System');
+        $this->assistantName = Configuration::get('whatsapp_bot_name') ?: 'Asistente Virtual';
+        $this->clinicName = Configuration::get('clinica_nombre') ?: 'la clínica';
     }
 
     public function processMessage(Conversation $conversation, string $messageText)
@@ -330,13 +330,20 @@ class WhatsappBotService
         sleep(2);
 
         // Enviar mensaje de bienvenida con información útil
-        $clinicaTelefono = Configuration::get('clinica_telefono', 'No disponible');
-        $clinicaDireccion = Configuration::get('clinica_direccion', 'No disponible');
+        $clinicaTelefono = Configuration::get('clinica_telefono');
+        $clinicaDireccion = Configuration::get('clinica_direccion');
+        $clinicaHorario = Configuration::get('clinica_horario');
 
         $info = "📌 *INFORMACIÓN IMPORTANTE:*\n\n";
-        $info .= "🕐 *Horario:* Lunes a Viernes 9:00 AM - 7:00 PM | Sábados 9:00 AM - 2:00 PM\n";
-        $info .= "📞 *Emergencias:* {$clinicaTelefono}\n";
-        $info .= "🏥 *Dirección:* {$clinicaDireccion}\n\n";
+        if ($clinicaHorario) {
+            $info .= "🕐 *Horario:* {$clinicaHorario}\n";
+        }
+        if ($clinicaTelefono) {
+            $info .= "📞 *Emergencias:* {$clinicaTelefono}\n";
+        }
+        if ($clinicaDireccion) {
+            $info .= "🏥 *Dirección:* {$clinicaDireccion}\n\n";
+        }
         $info .= "Recuerda que también te enviaré:\n";
         $info .= "✅ Recordatorios de tus citas\n";
         $info .= "🎂 Saludos de cumpleaños\n";
@@ -487,7 +494,11 @@ class WhatsappBotService
         $reply .= "Cuéntame, ¿para qué *fecha* te gustaría programar tu visita?\n\n";
         $reply .= "📝 _Formato: DD/MM/AAAA_\n";
         $reply .= "📌 _Ejemplo: 15/12/2026_\n\n";
-        $reply .= '⏰ *Horario de atención:* Lunes a Viernes 9 AM - 7 PM | Sábados 9 AM - 2 PM';
+        
+        $clinicaHorario = Configuration::get('clinica_horario');
+        if ($clinicaHorario) {
+            $reply .= "⏰ *Horario de atención:* {$clinicaHorario}";
+        }
 
         $this->sendMessage($conversation->phone_number, $reply);
     }
@@ -1475,6 +1486,9 @@ class WhatsappBotService
             ->whereIn('status', ['pending', 'confirmed'])
             ->get();
 
+        $clinicaDireccion = Configuration::get('clinica_direccion');
+        $clinicaTelefono = Configuration::get('clinica_telefono');
+
         foreach ($appointments as $apt) {
             $msg = "⏰ *RECORDATORIO DE CITA* ⏰\n\n";
             $msg .= "¡Hola *{$patient->first_name}*! 👋\n\n";
@@ -1482,8 +1496,14 @@ class WhatsappBotService
             $msg .= '📅 Fecha: '.Carbon::parse($apt->date)->format('d/m/Y')."\n";
             $msg .= "⏰ Hora: {$apt->start_time}\n";
             $msg .= "🦷 Motivo: {$apt->treatment}\n\n";
-            $msg .= "📍 *Dirección:* Av. Principal 456, Miraflores\n";
-            $msg .= "📞 *Teléfono:* 999-888-777\n\n";
+            if ($clinicaDireccion) {
+                $msg .= "📍 *Dirección:* {$clinicaDireccion}\n";
+            }
+            if ($clinicaTelefono) {
+                $msg .= "📞 *Teléfono:* {$clinicaTelefono}\n\n";
+            } else {
+                $msg .= "\n";
+            }
             $msg .= "Si necesitas reprogramar, responde con la opción *4*. 🔄\n";
             $msg .= '¡Te esperamos! 😊🦷';
 
@@ -1502,6 +1522,8 @@ class WhatsappBotService
             ->whereIn('status', ['pending', 'confirmed'])
             ->get();
 
+        $clinicaDireccion = Configuration::get('clinica_direccion');
+
         foreach ($appointments as $apt) {
             $msg = "🔔 *TU CITA ES EN 2 HORAS* 🔔\n\n";
             $msg .= "¡Hola *{$patient->first_name}*! 🦷\n\n";
@@ -1510,7 +1532,9 @@ class WhatsappBotService
             $msg .= "• Llega 10 minutos antes\n";
             $msg .= "• Trae tu DNI\n";
             $msg .= "• Cepíllate antes de venir 😁\n\n";
-            $msg .= "📍 Av. Principal 456, Miraflores\n";
+            if ($clinicaDireccion) {
+                $msg .= "📍 {$clinicaDireccion}\n";
+            }
             $msg .= '¡Te esperamos! 💙';
 
             $this->sendMessage($conversation->phone_number, $msg);
@@ -1733,6 +1757,8 @@ class WhatsappBotService
             ->whereIn('status', ['pending', 'confirmed'])
             ->get();
 
+        $clinicaDireccion = Configuration::get('clinica_direccion');
+
         foreach ($appointments as $apt) {
             $msg = "⏰ *RECORDATORIO DE CITA - MAÑANA* ⏰\n\n";
             $msg .= "¡Hola *{$apt->patient->first_name}*! 👋\n\n";
@@ -1740,7 +1766,9 @@ class WhatsappBotService
             $msg .= '📅 '.Carbon::parse($apt->date)->format('d/m/Y')."\n";
             $msg .= "⏰ {$apt->start_time}\n";
             $msg .= "🦷 {$apt->treatment}\n\n";
-            $msg .= "📍 Av. Principal 456, Miraflores\n";
+            if ($clinicaDireccion) {
+                $msg .= "📍 {$clinicaDireccion}\n";
+            }
             $msg .= '¡Te esperamos! 😊🦷';
 
             try {
@@ -1762,12 +1790,16 @@ class WhatsappBotService
             ->whereIn('status', ['pending', 'confirmed'])
             ->get();
 
+        $clinicaDireccion = Configuration::get('clinica_direccion');
+
         foreach ($appointments as $apt) {
             $msg = "🔔 *TU CITA ES EN 2 HORAS* 🔔\n\n";
             $msg .= "¡Hola *{$apt->patient->first_name}*! 🦷\n\n";
             $msg .= "Tu cita es hoy a las *{$apt->start_time}*.\n";
             $msg .= "🦷 {$apt->treatment}\n\n";
-            $msg .= "📍 Av. Principal 456, Miraflores\n";
+            if ($clinicaDireccion) {
+                $msg .= "📍 {$clinicaDireccion}\n";
+            }
             $msg .= '¡Llega 10 minutos antes! 😁';
 
             try {

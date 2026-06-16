@@ -89,8 +89,10 @@ class WhatsAppService
             return;
         }
 
-        $clinica = Configuration::get('clinica_nombre', 'Clínica Dental System');
-        $botName = Configuration::get('whatsapp_bot_name', 'Asistente Virtual');
+        $clinica = Configuration::get('clinica_nombre') ?: 'la clínica';
+        $botName = Configuration::get('whatsapp_bot_name') ?: 'Tu asistente virtual';
+        $direccion = Configuration::get('clinica_direccion');
+        $telefono = Configuration::get('clinica_telefono');
         $fecha = Carbon::parse($cita->date)->format('d/m/Y');
         $hora = Carbon::parse($cita->start_time)->format('H:i');
 
@@ -99,7 +101,13 @@ class WhatsAppService
         $mensaje .= "📅 *Fecha:* {$fecha}\n";
         $mensaje .= "⏰ *Hora:* {$hora}\n";
         $mensaje .= "🦷 *Tratamiento:* {$cita->treatment}\n\n";
-        $mensaje .= "Por favor, confírmanos tu asistencia respondiendo a este mensaje con un 'SÍ' o avísanos si deseas reprogramar.\n\n";
+        if ($direccion) {
+            $mensaje .= "📍 *Dirección:* {$direccion}\n";
+        }
+        if ($telefono) {
+            $mensaje .= "📞 *Teléfono:* {$telefono}\n";
+        }
+        $mensaje .= "\nPor favor, confírmanos tu asistencia respondiendo a este mensaje con un 'SÍ' o avísanos si deseas reprogramar.\n\n";
         $mensaje .= '¡Te esperamos!';
 
         $this->enviarMensaje($cita->patient->phone, $mensaje);
@@ -114,8 +122,9 @@ class WhatsAppService
             return;
         }
 
-        $clinica = Configuration::get('clinica_nombre', 'Clínica Dental System');
-        $botName = Configuration::get('whatsapp_bot_name', 'Asistente Virtual');
+        $clinica = Configuration::get('clinica_nombre') ?: 'la clínica';
+        $botName = Configuration::get('whatsapp_bot_name') ?: 'Tu asistente virtual';
+        $direccion = Configuration::get('clinica_direccion');
         $fecha = Carbon::parse($cita->date)->format('d/m/Y');
         $hora = Carbon::parse($cita->start_time)->format('H:i');
 
@@ -124,6 +133,9 @@ class WhatsAppService
         $mensaje .= "📅 *Fecha:* {$fecha}\n";
         $mensaje .= "⏰ *Hora:* {$hora}\n";
         $mensaje .= "🦷 *Tratamiento:* {$cita->treatment}\n\n";
+        if ($direccion) {
+            $mensaje .= "📍 *Dirección:* {$direccion}\n\n";
+        }
         $mensaje .= '¡Nos vemos pronto!';
 
         $this->enviarMensaje($cita->patient->phone, $mensaje);
@@ -138,12 +150,18 @@ class WhatsAppService
             return;
         }
 
-        $clinica = Configuration::get('clinica_nombre', 'Clínica Dental System');
-        $botName = Configuration::get('whatsapp_bot_name', 'Asistente Virtual');
+        $clinica = Configuration::get('clinica_nombre') ?: 'la clínica';
+        $botName = Configuration::get('whatsapp_bot_name') ?: 'Tu asistente virtual';
+        $telefono = Configuration::get('clinica_telefono');
 
         $mensaje = "¡Hola {$cita->patient->first_name}! ❌\n\n";
         $mensaje .= "Soy *{$botName}*. Te informamos que tu cita para el tratamiento de *{$cita->treatment}* en *{$clinica}* ha sido *CANCELADA*.\n\n";
-        $mensaje .= 'Si deseas reprogramar, por favor contáctanos respondiendo a este mensaje.';
+        $mensaje .= 'Si deseas reprogramar, por favor contáctanos respondiendo a este mensaje';
+        if ($telefono) {
+            $mensaje .= " o llamando al {$telefono}.";
+        } else {
+            $mensaje .= ".";
+        }
 
         $this->enviarMensaje($cita->patient->phone, $mensaje);
     }
@@ -157,8 +175,9 @@ class WhatsAppService
             return;
         }
 
-        $clinica = Configuration::get('clinica_nombre', 'Clínica Dental System');
-        $botName = Configuration::get('whatsapp_bot_name', 'Asistente Virtual');
+        $clinica = Configuration::get('clinica_nombre') ?: 'la clínica';
+        $botName = Configuration::get('whatsapp_bot_name') ?: 'Tu asistente virtual';
+        $direccion = Configuration::get('clinica_direccion');
         $fecha = Carbon::parse($cita->date)->format('d/m/Y');
         $hora = Carbon::parse($cita->start_time)->format('H:i');
 
@@ -167,6 +186,9 @@ class WhatsAppService
         $mensaje .= "📅 *Nueva Fecha:* {$fecha}\n";
         $mensaje .= "⏰ *Nueva Hora:* {$hora}\n";
         $mensaje .= "🦷 *Tratamiento:* {$cita->treatment}\n\n";
+        if ($direccion) {
+            $mensaje .= "📍 *Dirección:* {$direccion}\n\n";
+        }
         $mensaje .= 'Si tienes algún inconveniente, por favor avísanos.';
 
         $this->enviarMensaje($cita->patient->phone, $mensaje);
