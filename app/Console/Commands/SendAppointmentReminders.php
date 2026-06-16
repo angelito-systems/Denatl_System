@@ -42,7 +42,8 @@ class SendAppointmentReminders extends Command
                 continue;
             }
 
-            $apptTime = Carbon::parse($appt->date.' '.$appt->start_time);
+            $dateStr = $appt->date instanceof Carbon ? $appt->date->format('Y-m-d') : substr((string)$appt->date, 0, 10);
+            $apptTime = Carbon::parse($dateStr.' '.$appt->start_time);
 
             // Verificar si cae en la ventana de recordatorio 1 (con 1 minuto de margen)
             $diff1 = abs($apptTime->diffInMinutes($target1, false));
