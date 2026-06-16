@@ -24,7 +24,7 @@ class StoreTreatmentRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'category' => 'required|string|max:255',
+            'treatment_category_id' => 'required|exists:treatment_categories,id',
             'base_price' => 'required|numeric|min:0',
             'estimated_duration_minutes' => 'required|integer|min:1',
             'is_per_tooth' => 'boolean',

@@ -27,6 +27,7 @@
     import { Label } from '@/components/ui/label';
     import { Toast } from '@/lib/utils/toast';
     import { Loader2 } from 'lucide-svelte';
+    import SearchableSelect from '@/components/SearchableSelect.svelte';
 
     const { treatments, categories = [], filters } = $props();
 
@@ -190,14 +191,16 @@
                 {#if treatmentForm.errors.name}<p class="text-xs text-red-500">{treatmentForm.errors.name}</p>{/if}
             </div>
 
-            <div class="space-y-2">
-                <Label>Categoría *</Label>
-                <select class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" bind:value={treatmentForm.treatment_category_id} required>
-                    {#each categories as category}
-                        <option value={category.id}>{category.name}</option>
-                    {/each}
-                </select>
-                {#if treatmentForm.errors.treatment_category_id}<p class="text-xs text-red-500">{treatmentForm.errors.treatment_category_id}</p>{/if}
+            <div>
+                <SearchableSelect
+                    label="Categoría *"
+                    bind:value={treatmentForm.treatment_category_id}
+                    error={treatmentForm.errors.treatment_category_id}
+                    options={categories.map((c: any) => ({
+                        value: c.id,
+                        label: c.name
+                    }))}
+                />
             </div>
 
             <div class="grid grid-cols-2 gap-4">
