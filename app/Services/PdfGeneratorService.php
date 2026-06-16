@@ -55,6 +55,8 @@ class PdfGeneratorService
             if ($chromePath = env('BROWSERSHOT_CHROME_PATH')) {
                 $browsershot->setChromePath($chromePath);
             }
+            // Agregar noSandbox para evitar errores de permisos de Chrome en Docker (Operation not permitted)
+            $browsershot->noSandbox();
         });
     }
 
