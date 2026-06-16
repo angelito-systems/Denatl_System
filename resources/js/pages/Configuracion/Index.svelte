@@ -51,6 +51,7 @@
         whatsapp_api_url: configs.whatsapp_api_url || 'http://localhost:8080',
         whatsapp_api_key: configs.whatsapp_api_key || '',
         whatsapp_instance: configs.whatsapp_instance || 'clinica-dental',
+        whatsapp_bot_name: configs.whatsapp_bot_name || 'Dra. Valentina',
         qztray_cert_txt: configs.qztray_cert_txt || '',
         qztray_private_key_pem: configs.qztray_private_key_pem || '',
         sunat_ruc: configs.sunat_ruc || '',
@@ -642,6 +643,13 @@
                             bind:value={form.settings.whatsapp_api_key}
                             type="password"
                             placeholder="opcional"
+                        />
+                    </div>
+                    <div class="space-y-2">
+                        <Label>Nombre del Asistente Virtual</Label>
+                        <Input
+                            bind:value={form.settings.whatsapp_bot_name}
+                            placeholder="Ej. Dra. Valentina"
                         />
                     </div>
                 </div>

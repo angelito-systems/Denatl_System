@@ -23,7 +23,8 @@ class WhatsappBotService
 {
     protected $evolutionApi;
 
-    protected $assistantName = 'Dra. Valentina';
+    protected $assistantName;
+    protected $clinicName;
 
     // Estados del bot
     const STATE_WELCOME = 'welcome';
@@ -57,6 +58,8 @@ class WhatsappBotService
     public function __construct(EvolutionApiService $evolutionApi)
     {
         $this->evolutionApi = $evolutionApi;
+        $this->assistantName = Configuration::get('whatsapp_bot_name', 'Dra. Valentina');
+        $this->clinicName = Configuration::get('clinica_nombre', 'Clínica Dental Sonrisa Perfecta');
     }
 
     public function processMessage(Conversation $conversation, string $messageText)
@@ -179,7 +182,7 @@ class WhatsappBotService
         }
 
         // Nuevo paciente - flujo de registro
-        $reply = "🦷✨ *¡Hola! Bienvenido(a) a Clínica Dental Sonrisa Perfecta* ✨🦷\n\n";
+        $reply = "🦷✨ *¡Hola! Bienvenido(a) a {$this->clinicName}* ✨🦷\n\n";
         $reply .= "Soy *{$this->assistantName}*, tu asistente virtual. Estoy aquí para ayudarte con tus citas, consultas y todo lo que necesites para mantener tu sonrisa radiante. 😊\n\n";
         $reply .= "Para comenzar con tu registro y brindarte una atención personalizada, ¿podrías indicarme tu número de *DNI*? (8 dígitos)\n\n";
         $reply .= '📝 _Ejemplo: 12345678_';
@@ -320,7 +323,7 @@ class WhatsappBotService
         ]);
 
         $reply = "🎉✨ *¡Registro exitoso!* ✨🎉\n\n";
-        $reply .= "Bienvenido(a) a la familia de *Clínica Dental Sonrisa Perfecta*, {$patient->first_name}. 🦷💙\n\n";
+        $reply .= "Bienvenido(a) a la familia de *{$this->clinicName}*, {$patient->first_name}. 🦷💙\n\n";
         $reply .= 'Estamos encantados de tenerte con nosotros. A continuación te muestro todo lo que puedo hacer por ti:';
 
         $this->sendMessage($conversation->phone_number, $reply);
@@ -1304,7 +1307,7 @@ class WhatsappBotService
         $reply = "⭐✨ *¡Valóranos!* ✨⭐\n\n";
         $reply .= "Nos encantaría conocer tu opinión sobre nuestro servicio. 🤗\n\n";
         $reply .= "En una escala del *1 al 5*, donde 5 es excelente:\n";
-        $reply .= "¿Cómo calificarías tu experiencia en Clínica Dental Sonrisa Perfecta?\n\n";
+        $reply .= "¿Cómo calificarías tu experiencia en {$this->clinicName}?\n\n";
         $reply .= "1️⃣ ⭐ Muy mala\n";
         $reply .= "2️⃣ ⭐⭐ Regular\n";
         $reply .= "3️⃣ ⭐⭐⭐ Buena\n";
@@ -1452,7 +1455,7 @@ class WhatsappBotService
 
             $msg = "🎂🎉✨ *¡FELIZ CUMPLEAÑOS!* ✨🎉🎂\n\n";
             $msg .= "¡Felices {$age} años, *{$patient->first_name}*! 🎈\n\n";
-            $msg .= "De parte de todo el equipo de *Clínica Dental Sonrisa Perfecta* te deseamos un día maravilloso. 🦷💙\n\n";
+            $msg .= "De parte de todo el equipo de *{$this->clinicName}* te deseamos un día maravilloso. 🦷💙\n\n";
             $msg .= "🎁 *Regalo especial:* 30% de descuento en tu próxima limpieza dental este mes.\n\n";
             $msg .= '¡Que tengas un año lleno de sonrisas! 😊✨';
 
@@ -1706,7 +1709,7 @@ class WhatsappBotService
 
             $msg = "🎂🎉✨ *¡FELIZ CUMPLEAÑOS!* ✨🎉🎂\n\n";
             $msg .= "¡Felices {$age} años, *{$patient->first_name}*! 🎈\n\n";
-            $msg .= "De parte de todo el equipo de *Clínica Dental Sonrisa Perfecta* te deseamos un día maravilloso. 🦷💙\n\n";
+            $msg .= "De parte de todo el equipo de *{$this->clinicName}* te deseamos un día maravilloso. 🦷💙\n\n";
             $msg .= "🎁 *Regalo especial:* 30% de descuento en tu próxima limpieza dental este mes.\n\n";
             $msg .= '¡Que tengas un año lleno de sonrisas! 😊✨';
 
