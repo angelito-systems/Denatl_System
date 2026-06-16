@@ -63,20 +63,20 @@ class UserController extends Controller
         return redirect()->back()->with('success', 'Personal creado exitosamente.');
     }
 
-    public function update(Request $request, User $user)
+    public function update(Request $request, User $staff)
     {
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'username' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'username' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($staff->id)],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($staff->id)],
             'role' => 'required|string|exists:roles,name',
             'room' => 'nullable|string|max:255',
-            'dni' => ['nullable', 'string', 'max:15', Rule::unique('users')->ignore($user->id)],
+            'dni' => ['nullable', 'string', 'max:15', Rule::unique('users')->ignore($staff->id)],
             'cmp' => 'nullable|string|max:255',
         ]);
 
-        $user->update([
+        $staff->update([
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
             'username' => $validated['username'],
@@ -89,17 +89,17 @@ class UserController extends Controller
 
         if ($request->filled('password')) {
             $request->validate(['password' => 'string|min:8']);
-            $user->update(['password' => Hash::make($request->password)]);
+            $staff->update(['password' => Hash::make($request->password)]);
         }
 
-        $user->syncRoles([$validated['role']]);
+        $staff->syncRoles([$validated['role']]);
 
         return redirect()->back()->with('success', 'Personal actualizado exitosamente.');
     }
 
-    public function destroy(User $user)
+    public function destroy(User $staff)
     {
-        $user->delete();
+        $staff->delete();
 
         return redirect()->back()->with('success', 'Personal eliminado exitosamente.');
     }

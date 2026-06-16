@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   app:
     build:
@@ -16,7 +15,6 @@ services:
       - .env
     networks:
       - dental_network
-
   nginx:
     image: nginx:alpine
     container_name: dental_system_nginx
@@ -33,7 +31,6 @@ services:
       - app
     networks:
       - dental_network
-
 networks:
   dental_network:
     driver: bridge
