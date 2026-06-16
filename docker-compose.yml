@@ -47,26 +47,6 @@ services:
             timeout: 10s
             retries: 3
 
-    mysql:
-        image: mysql:8.0
-        container_name: dental_system_mysql
-        restart: always
-        ports:
-            - "3306:3306"
-        environment:
-            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
-            MYSQL_DATABASE: ${DB_DATABASE:-system_dental}
-        volumes:
-            - mysql_data:/var/lib/mysql
-        networks:
-            - dental_network
-        healthcheck:
-            test: [ "CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD" ]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-
-
 volumes:
     mysql_data:
     postgres_data:
