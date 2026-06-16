@@ -815,10 +815,10 @@ class WhatsappBotService
 
             $msg .= "\n💰 *TOTAL PENDIENTE: S/ {$total}*\n\n";
             $msg .= "💳 *Métodos de pago:*\n";
-            if ($yapePlin !== 'No configurado') {
+            if (!empty($yapePlin) && $yapePlin !== 'No configurado') {
                 $msg .= "• Yape/Plin: {$yapePlin}\n";
             }
-            if ($transferencia !== 'No configurado') {
+            if (!empty($transferencia) && $transferencia !== 'No configurado') {
                 $msg .= "• Transferencia:\n{$transferencia}\n";
             }
             $msg .= "• Pago en clínica: Efectivo o tarjeta\n\n";
@@ -1579,10 +1579,10 @@ class WhatsappBotService
                 $msg .= "• {$payment->description} - S/ {$payment->amount} (Vence: ".Carbon::parse($payment->due_date)->format('d/m/Y').")\n";
             }
             $msg .= "\n💡 *Métodos de pago:*\n";
-            if ($yapePlin !== 'No configurado') {
+            if (!empty($yapePlin) && $yapePlin !== 'No configurado') {
                 $msg .= "• Yape/Plin: {$yapePlin}\n";
             }
-            if ($transferencia !== 'No configurado') {
+            if (!empty($transferencia) && $transferencia !== 'No configurado') {
                 $msg .= "• Transferencia:\n{$transferencia}\n";
             }
             $msg .= "\nPara más información, escribe *9*. 👩‍💼";
