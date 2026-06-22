@@ -52,7 +52,7 @@ class PatientController extends Controller
     public function show(Patient $patient)
     {
         Gate::authorize('ver_pacientes');
-        $patient->load(['documents.media', 'evolutions.dentist', 'evolutions.appointment', 'appointments', 'treatmentContracts.document', 'treatmentContracts.payments']);
+        $patient->load(['documents.media', 'evolutions.dentist', 'evolutions.appointment', 'appointments.patientTreatment', 'treatmentContracts.document', 'treatmentContracts.payments', 'observations.user', 'patientTreatments']);
 
         $latestOdontogram = $patient->evolutions()
             ->whereNotNull('odontogram_data')
@@ -134,6 +134,13 @@ class PatientController extends Controller
     {
         return response()->json(
             $patient->appointments()->orderBy('date', 'desc')->orderBy('start_time', 'desc')->get()
+        );
+    }
+
+    public function patientTreatments(Patient $patient)
+    {
+        return response()->json(
+            $patient->patientTreatments()->where('status', 'Activo')->orderBy('created_at', 'desc')->get()
         );
     }
 }

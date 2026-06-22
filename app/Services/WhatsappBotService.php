@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Http\Controllers\ReniecController;
 use App\Models\Appointment;
 use App\Models\Configuration;
 use App\Models\Conversation;
@@ -16,7 +15,6 @@ use App\Models\Rating;
 use App\Models\TreatmentContract;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class WhatsappBotService
@@ -72,6 +70,24 @@ class WhatsappBotService
 
         $messageText = trim(strtolower($messageText));
         $state = $conversation->bot_state;
+
+        // Si está en el estado inicial y no es paciente aún, verificamos palabras clave
+        if ($state === self::STATE_WELCOME && ! $conversation->patient_id) {
+            $keywordsString = Configuration::get('bot_keywords', 'cita,agendar,reservar,consulta,horario,precio,psicólogo,atención,cancelar,reprogramar');
+            $keywords = array_map('trim', explode(',', strtolower($keywordsString)));
+
+            $hasKeyword = false;
+            foreach ($keywords as $keyword) {
+                if ($keyword !== '' && str_contains($messageText, $keyword)) {
+                    $hasKeyword = true;
+                    break;
+                }
+            }
+
+            if (! $hasKeyword) {
+                return; // Ignorar mensaje silenciosamente
+            }
+        }
 
         // Comandos globales - el paciente puede salir o ir al menú en cualquier momento
         $globalCommands = ['salir', 'menu', 'menú', 'inicio', 'cancelar', 'cancel'];
@@ -185,8 +201,8 @@ class WhatsappBotService
         // Nuevo paciente - flujo de registro
         $reply = "🦷✨ *¡Hola! Bienvenido(a) a {$this->clinicName}* ✨🦷\n\n";
         $reply .= "Soy *{$this->assistantName}*, tu asistente virtual. Estoy aquí para ayudarte con tus citas, consultas y todo lo que necesites para mantener tu sonrisa radiante. 😊\n\n";
-        $reply .= "Para comenzar con tu registro y brindarte una atención personalizada, ¿podrías indicarme tu número de *DNI*? (8 dígitos)\n\n";
-        $reply .= '📝 _Ejemplo: 12345678_';
+        $reply .= "Para comenzar con tu registro y brindarte una atención personalizada, ¿podrías indicarme tu *Nombre completo*?\n\n";
+        $reply .= '📝 _Ejemplo: Juan Pérez Gómez_';
 
         $conversation->update(['bot_state' => self::STATE_ASK_DNI]);
         $this->sendTypingIndicator($conversation->phone_number);
@@ -222,67 +238,40 @@ class WhatsappBotService
 
     protected function handleAskDni(Conversation $conversation, string $messageText)
     {
-        // Validar DNI: 8 dígitos numéricos
-        if (! preg_match('/^\d{8}$/', $messageText)) {
-            $reply = "🤔 *Ups, ese DNI no parece válido.*\n\n";
-            $reply .= "El DNI peruano debe tener exactamente *8 dígitos numéricos*.\n";
-            $reply .= "Por favor, inténtalo de nuevo. 📝\n\n";
-            $reply .= '📌 _Ejemplo: 12345678_';
+        if (strlen($messageText) < 3) {
+            $reply = "🤔 *Ese nombre parece muy corto.*\n\n";
+            $reply .= "Por favor, escribe tu nombre completo.\n";
+            $reply .= '📝 _Ejemplo: Juan Pérez Gómez_';
 
             $this->sendMessage($conversation->phone_number, $reply);
 
             return;
         }
 
-        $dni = $messageText;
+        $nombreCompleto = ucwords(trim($messageText));
 
-        // Consultar RENIEC
-        try {
-            $this->sendTypingIndicator($conversation->phone_number);
-            $reniec = new ReniecController;
-            $request = new Request;
-            $response = $reniec->searchDni($request, $dni);
+        $parts = explode(' ', $nombreCompleto);
+        $first_name = $parts[0] ?? '';
+        $last_name = count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : '';
 
-            $data = json_decode($response->getContent(), true);
+        $reply = "✅ *¡Perfecto! Un gusto saludarte, {$first_name}:*\n\n";
+        $reply .= "📋 Ahora, para completar tu registro, necesito un dato más:\n";
+        $reply .= "¿Podrías indicarme tu *dirección actual* o lugar de residencia? 🏠\n\n";
+        $reply .= '📝 _Ejemplo: Av. Los Olivos 123, San Isidro_';
 
-            if (isset($data['success']) && $data['success']) {
-                $nombreCompleto = $data['data']['nombre_completo'] ?? '';
-                $nombres = $data['data']['nombres'] ?? '';
-                $apellidos = trim(($data['data']['apellido_paterno'] ?? '').' '.($data['data']['apellido_materno'] ?? ''));
+        $botData = $conversation->bot_data ?? [];
+        $botData['register'] = [
+            'dni' => null,
+            'first_name' => $first_name,
+            'last_name' => $last_name,
+        ];
 
-                $reply = "✅ *¡Perfecto! Encontré tus datos:*\n\n";
-                $reply .= "👤 *Nombre:* {$nombreCompleto}\n\n";
-                $reply .= "📋 Ahora, para completar tu registro, necesito un dato más:\n";
-                $reply .= "¿Podrías indicarme tu *dirección actual* o lugar de residencia? 🏠\n\n";
-                $reply .= '📝 _Ejemplo: Av. Los Olivos 123, San Isidro_';
+        $conversation->update([
+            'bot_state' => self::STATE_ASK_ADDRESS,
+            'bot_data' => $botData,
+        ]);
 
-                $botData = $conversation->bot_data ?? [];
-                $botData['register'] = [
-                    'dni' => $dni,
-                    'first_name' => $nombres,
-                    'last_name' => $apellidos,
-                ];
-
-                $conversation->update([
-                    'bot_state' => self::STATE_ASK_ADDRESS,
-                    'bot_data' => $botData,
-                ]);
-
-                $this->sendMessage($conversation->phone_number, $reply);
-            } else {
-                $reply = "😔 *Lo siento, no encontré tus datos en el registro nacional.*\n\n";
-                $reply .= "Por favor, verifica que el DNI sea correcto e inténtalo de nuevo.\n";
-                $reply .= "Si el problema persiste, puedes escribir *'hablar con asesor'* para recibir ayuda personalizada. 👩‍💼";
-
-                $this->sendMessage($conversation->phone_number, $reply);
-            }
-        } catch (\Exception $e) {
-            Log::error('Error en bot RENIEC: '.$e->getMessage());
-            $reply = "⚠️ *Tuvimos un problema técnico al verificar tu DNI.*\n\n";
-            $reply .= "No te preocupes, puedes intentarlo nuevamente en unos minutos o escribir *'hablar con asesor'* para que te ayudemos personalmente. 👩‍💼";
-
-            $this->sendMessage($conversation->phone_number, $reply);
-        }
+        $this->sendMessage($conversation->phone_number, $reply);
     }
 
     protected function handleAskAddress(Conversation $conversation, string $messageText)

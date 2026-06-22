@@ -98,4 +98,14 @@ class Patient extends Model implements HasMedia
     {
         return $this->hasMany(PatientImage::class)->orderBy('taken_at', 'desc')->orderBy('created_at', 'desc');
     }
+
+    public function observations(): HasMany
+    {
+        return $this->hasMany(Observation::class)->orderBy('created_at', 'desc');
+    }
+
+    public function patientTreatments(): HasMany
+    {
+        return $this->hasMany(PatientTreatment::class)->orderBy('created_at', 'desc');
+    }
 }

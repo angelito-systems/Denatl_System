@@ -29,6 +29,8 @@
     import ContratosDocumentos from './ContratosDocumentos.svelte';
     import ContractsTab from './ContractsTab.svelte';
     import ClinicalImagesTab from './ClinicalImagesTab.svelte';
+    import ObservationsTab from './ObservationsTab.svelte';
+    import TreatmentsTab from './TreatmentsTab.svelte';
     import SendWhatsappButton from '@/components/SendWhatsappButton.svelte';
     import confetti from 'canvas-confetti';
     import { onMount } from 'svelte';
@@ -65,7 +67,7 @@
     onMount(() => {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get('tab');
-        if (tab && ['general', 'odontogram', 'history', 'contracts', 'images'].includes(tab)) {
+        if (tab && ['general', 'odontogram', 'history', 'contracts', 'images', 'observations', 'treatments'].includes(tab)) {
             activeTab = tab;
         }
 
@@ -247,12 +249,14 @@
 
     <!-- Tabs Content -->
     <Tabs bind:value={activeTab} class="w-full">
-            <TabsList class="mb-4 flex h-auto flex-wrap w-full lg:w-auto justify-start">
-                <TabsTrigger class="flex-1" value="general">Info. General</TabsTrigger>
-                <TabsTrigger class="flex-1" value="odontogram">Odontograma</TabsTrigger>
-                <TabsTrigger class="flex-1" value="history">Evoluciones</TabsTrigger>
-                <TabsTrigger class="flex-1" value="contracts">Contratos y Financiamiento</TabsTrigger>
-                <TabsTrigger class="flex-1" value="images">Imágenes Clínicas</TabsTrigger>
+            <TabsList class="mb-4 flex h-auto flex-wrap w-full lg:w-auto justify-start gap-2">
+                <TabsTrigger class="flex-1 min-w-[120px]" value="general">Info. General</TabsTrigger>
+                <TabsTrigger class="flex-1 min-w-[120px]" value="treatments">Tratamientos</TabsTrigger>
+                <TabsTrigger class="flex-1 min-w-[120px]" value="observations">Observaciones</TabsTrigger>
+                <TabsTrigger class="flex-1 min-w-[120px]" value="odontogram">Odontograma</TabsTrigger>
+                <TabsTrigger class="flex-1 min-w-[120px]" value="history">Evoluciones</TabsTrigger>
+                <TabsTrigger class="flex-1 min-w-[120px]" value="contracts">Contratos y Financiamiento</TabsTrigger>
+                <TabsTrigger class="flex-1 min-w-[120px]" value="images">Imágenes Clínicas</TabsTrigger>
             </TabsList>
 
         <TabsContent value="general" class="mt-6">
@@ -532,6 +536,14 @@
 
         <TabsContent value="images" class="mt-6">
             <ClinicalImagesTab {patient} />
+        </TabsContent>
+
+        <TabsContent value="observations" class="mt-6">
+            <ObservationsTab {patient} />
+        </TabsContent>
+
+        <TabsContent value="treatments" class="mt-6">
+            <TreatmentsTab {patient} />
         </TabsContent>
     </Tabs>
 </div>

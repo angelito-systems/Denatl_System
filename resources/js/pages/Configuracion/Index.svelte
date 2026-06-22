@@ -52,6 +52,7 @@
         whatsapp_api_key: configs.whatsapp_api_key || '',
         whatsapp_instance: configs.whatsapp_instance || 'clinica-dental',
         whatsapp_bot_name: configs.whatsapp_bot_name || 'Dra. Valentina',
+        bot_keywords: configs.bot_keywords || 'cita,agendar,reservar,consulta,horario,precio,psicólogo,atención,cancelar,reprogramar',
         qztray_cert_txt: configs.qztray_cert_txt || '',
         qztray_private_key_pem: configs.qztray_private_key_pem || '',
         sunat_ruc: configs.sunat_ruc || '',
@@ -753,6 +754,11 @@
                     <Label>Nombre del Asistente Virtual</Label>
                     <Input bind:value={form.settings.whatsapp_bot_name} placeholder="Ej. Dra. Valentina" />
                     <p class="text-xs text-muted-foreground">Este es el nombre con el que el Bot se presentará a tus pacientes.</p>
+                </div>
+                <div class="space-y-2 md:col-span-2">
+                    <Label>Palabras Clave para Iniciar (separadas por coma)</Label>
+                    <Input bind:value={form.settings.bot_keywords} placeholder="cita,agendar,reservar,consulta,horario,precio,psicólogo,atención,cancelar,reprogramar" />
+                    <p class="text-xs text-muted-foreground">Si un paciente nuevo escribe alguna de estas palabras, el bot iniciará el flujo de registro. Si no, lo ignorará silenciosamente.</p>
                 </div>
                 <div class="space-y-2">
                     <Label>Primer Recordatorio (Ej. 24 horas antes)</Label>

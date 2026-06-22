@@ -117,6 +117,7 @@
         start_time: '',
         duration: '30',
         treatment: '',
+        patient_treatment_id: '',
         status: 'pending',
         notes: '',
     });
@@ -203,16 +204,26 @@
         };
     });
 
+    let patientTreatments = $state<any[]>([]);
+
     $effect(() => {
         if (form.patient_id) {
+            fetch(`/api/patients/${form.patient_id}/patient-treatments`)
+                .then(res => res.json())
+                .then(data => patientTreatments = data)
+                .catch(() => patientTreatments = []);
+
             const p = patients.find(
                 (pt) => pt.id.toString() === form.patient_id,
             );
             if (p && !showPatientDropdown) {
                 patientSearchQuery = `${p.first_name} ${p.last_name} (${p.dni})`;
             }
-        } else if (!showPatientDropdown) {
-            patientSearchQuery = '';
+        } else {
+            patientTreatments = [];
+            if (!showPatientDropdown) {
+                patientSearchQuery = '';
+            }
         }
     });
 
@@ -291,6 +302,7 @@
         form.start_time = selectedAppointment.start_time;
         form.duration = selectedAppointment.duration?.toString() || '30';
         form.treatment = selectedAppointment.treatment;
+        form.patient_treatment_id = selectedAppointment.patient_treatment_id?.toString() || '';
         form.status = selectedAppointment.status || 'pending';
         form.notes = selectedAppointment.notes || '';
         isDetailsModalOpen = false;
@@ -308,6 +320,7 @@
                 start_time: selectedAppointment.start_time,
                 duration: selectedAppointment.duration,
                 treatment: selectedAppointment.treatment,
+                patient_treatment_id: selectedAppointment.patient_treatment_id,
                 status: newStatus,
             },
             {
@@ -656,6 +669,23 @@
                                 {form.errors.treatment}
                             </p>
                         {/if}
+                    </div>
+
+                    <div class="space-y-2 relative col-span-2">
+                        <Label class="text-sm font-medium">Asociar a Proceso Terapéutico (Opcional)</Label>
+                        <Select bind:value={form.patient_treatment_id}>
+                            <SelectTrigger class="h-11 rounded-xl w-full">
+                                {form.patient_treatment_id 
+                                    ? patientTreatments.find(t => t.id.toString() === form.patient_treatment_id)?.name 
+                                    : '-- Independiente --'}
+                            </SelectTrigger>
+                            <SelectContent class="rounded-xl">
+                                <SelectItem value="" class="rounded-lg">-- Independiente --</SelectItem>
+                                {#each patientTreatments as pt}
+                                    <SelectItem value={pt.id.toString()} class="rounded-lg">{pt.name}</SelectItem>
+                                {/each}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             </div>

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AvailableHoursController;
 use App\Http\Controllers\Api\EvolutionWebhookController;
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CashboxController;
 use App\Http\Controllers\ConfigurationController;
 use App\Http\Controllers\DashboardController;
@@ -10,8 +11,10 @@ use App\Http\Controllers\DoctorScheduleController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\EvolutionController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\ObservationController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientImageController;
+use App\Http\Controllers\PatientTreatmentController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProjectorController;
 use App\Http\Controllers\PromotionController;
@@ -54,6 +57,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('treatments', TreatmentController::class);
     Route::resource('treatment-categories', TreatmentCategoryController::class);
     Route::resource('payments', PaymentController::class);
+    Route::resource('patient-treatments', PatientTreatmentController::class);
+    Route::resource('observations', ObservationController::class);
     // Administración y Marketing (Sólo Administrador)
     Route::middleware(['role:Administrador'])->group(function () {
         Route::get('reportes', [ReportController::class, 'index'])->name('reportes.index');
@@ -74,6 +79,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('raffles', RaffleController::class);
         Route::post('raffles/{raffle}/draw', [RaffleController::class, 'draw'])->name('raffles.draw');
         Route::resource('roles', RoleController::class)->only(['index', 'store', 'update']);
+        Route::resource('campaigns', CampaignController::class);
+    });
+
+    // Módulo de Auditoría (Solo Super Admin)
+    Route::middleware(['role:Super Admin'])->group(function () {
+        Route::get('audits', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('audits.index');
+        Route::get('audits/{auditLog}', [\App\Http\Controllers\AuditLogController::class, 'show'])->name('audits.show');
+        Route::post('audits/{auditLog}/review', [\App\Http\Controllers\AuditLogController::class, 'markAsReviewed'])->name('audits.review');
     });
 
     // Generación de PDFs
@@ -102,6 +115,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('api/patients/{patient}/payments', [PatientController::class, 'payments'])->name('api.patients.payments');
     Route::get('api/patients/{patient}/contracts', [PatientController::class, 'contracts'])->name('api.patients.contracts');
     Route::get('api/patients/{patient}/appointments', [PatientController::class, 'appointments'])->name('api.patients.appointments');
+    Route::get('api/patients/{patient}/patient-treatments', [PatientController::class, 'patientTreatments'])->name('api.patients.patient-treatments');
 
     // DNI
     Route::get('api/reniec/{dni}', [ReniecController::class, 'searchDni']);

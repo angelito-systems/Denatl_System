@@ -19,6 +19,7 @@
         UserRoundCog,
         Stethoscope,
         Shield,
+        ShieldAlert,
     } from 'lucide-svelte';
 
     import type { Snippet } from 'svelte';
@@ -163,6 +164,12 @@
                     href: '/configuracion',
                     icon: Settings,
                     permissions: ['ver_configuracion'],
+                },
+                {
+                    title: 'Auditoría',
+                    href: '/audits',
+                    icon: ShieldAlert,
+                    roles: ['Super Admin'],
                 },
             ],
         },
