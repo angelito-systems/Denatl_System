@@ -7,7 +7,12 @@
     import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
     import { Save, ClipboardList, Trash2 } from 'lucide-svelte';
 
-    let { patient } = $props();
+    let { patient, treatments = [] } = $props();
+
+    let searchFocused = $state(false);
+    let filteredTreatments = $derived(
+        treatments.filter((t: any) => t.name.toLowerCase().includes(form.name.toLowerCase()))
+    );
 
     const form = useForm({
         patient_id: patient.id,
@@ -55,9 +60,31 @@
         </CardHeader>
         <CardContent>
             <form onsubmit={saveTreatment} class="space-y-4">
-                <div class="space-y-2">
+                <div class="space-y-2 relative">
                     <Label>Nombre del Tratamiento / Proceso</Label>
-                    <Input bind:value={form.name} placeholder="Ej. Ortodoncia, Terapia de pareja..." required />
+                    <div class="relative">
+                        <Input 
+                            bind:value={form.name} 
+                            placeholder="Buscar en catálogo o escribir nombre..." 
+                            required 
+                            onfocus={() => searchFocused = true}
+                            onblur={() => setTimeout(() => searchFocused = false, 200)}
+                            autocomplete="off"
+                        />
+                        {#if searchFocused && filteredTreatments.length > 0}
+                            <div class="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md outline-none">
+                                {#each filteredTreatments as t}
+                                    <button 
+                                        type="button" 
+                                        class="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground" 
+                                        onclick={() => { form.name = t.name; searchFocused = false; }}
+                                    >
+                                        {t.name}
+                                    </button>
+                                {/each}
+                            </div>
+                        {/if}
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div class="space-y-2">

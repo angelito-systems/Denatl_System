@@ -543,7 +543,7 @@
         </TabsContent>
 
         <TabsContent value="treatments" class="mt-6">
-            <TreatmentsTab {patient} />
+            <TreatmentsTab {patient} {treatments} />
         </TabsContent>
     </Tabs>
 </div>
