@@ -1,6 +1,4 @@
 <script module lang="ts">
-    import { auditsIndex } from '@/routes/audits'; // Assuming wayfinder creates this or we can just use strings
-
     export const layout = {
         breadcrumbs: [
             {
