@@ -15,11 +15,7 @@ const appearance = $state<{ value: Appearance }>({ value: 'light' });
 let themeChangeMediaQuery: MediaQueryList | null = null;
 
 const prefersDark = (): boolean => {
-    if (typeof window === 'undefined') {
-        return false;
-    }
-
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return false;
 };
 
 const isDarkMode = (value: Appearance): boolean => {
@@ -91,8 +87,6 @@ export function initializeTheme(): () => void {
     applyTheme(appearance.value);
 
     detachThemeChangeListener();
-    themeChangeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    themeChangeMediaQuery.addEventListener('change', handleSystemThemeChange);
 
     return detachThemeChangeListener;
 }
