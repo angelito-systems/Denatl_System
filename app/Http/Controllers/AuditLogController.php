@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exports\AuditLogsExport;
 use App\Models\AuditLog;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
@@ -19,14 +20,14 @@ class AuditLogController extends Controller
 
         // Apply filters
         if ($request->filled('search')) {
-            $query->where(function($q) use ($request) {
+            $query->where(function ($q) use ($request) {
                 $search = "%{$request->search}%";
                 $q->where('user_name', 'like', $search)
-                  ->orWhere('user_email', 'like', $search)
-                  ->orWhere('action', 'like', $search)
-                  ->orWhere('module', 'like', $search)
-                  ->orWhere('description', 'like', $search)
-                  ->orWhere('correlation_id', 'like', $search);
+                    ->orWhere('user_email', 'like', $search)
+                    ->orWhere('action', 'like', $search)
+                    ->orWhere('module', 'like', $search)
+                    ->orWhere('description', 'like', $search)
+                    ->orWhere('correlation_id', 'like', $search);
             });
         }
 
@@ -41,15 +42,15 @@ class AuditLogController extends Controller
         if ($request->filled('user_id')) {
             $query->where('user_id', $request->user_id);
         }
-        
+
         if ($request->filled('action_type')) {
             $query->where('action', 'like', "%{$request->action_type}%");
         }
 
         if ($request->filled('date_start') && $request->filled('date_end')) {
             $query->whereBetween('created_at', [
-                $request->date_start . ' 00:00:00',
-                $request->date_end . ' 23:59:59'
+                $request->date_start.' 00:00:00',
+                $request->date_end.' 23:59:59',
             ]);
         }
 
@@ -60,13 +61,13 @@ class AuditLogController extends Controller
         if ($request->boolean('export')) {
             $format = $request->input('format', 'csv') === 'csv' ? \Maatwebsite\Excel\Excel::CSV : \Maatwebsite\Excel\Excel::XLSX;
             $extension = $format === \Maatwebsite\Excel\Excel::CSV ? 'csv' : 'xlsx';
-            
+
             AuditLogger::log(
                 action: 'Export Audit Logs',
                 module: 'AuditLog',
                 description: "Exported audit logs to {$extension}"
             );
-            
+
             return Excel::download(new AuditLogsExport($query), "audit_logs_{$sortDirection}.{$extension}", $format);
         }
 
@@ -121,7 +122,7 @@ class AuditLogController extends Controller
     {
         $auditLog->reviewed_at = now();
         $auditLog->reviewed_by = auth()->id();
-        
+
         // Use DB directly or update quietly to not trigger its own auditable trait if we added it (though it's in ignored models)
         $auditLog->saveQuietly();
 
