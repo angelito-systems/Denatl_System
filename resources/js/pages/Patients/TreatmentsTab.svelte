@@ -49,6 +49,16 @@
             default: return 'bg-slate-100 text-slate-700';
         }
     }
+
+    function formatDate(dateString: string | null) {
+        if (!dateString) return 'No definido';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+        } catch (e) {
+            return dateString;
+        }
+    }
 </script>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -150,8 +160,8 @@
                             <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                 <div>
                                     <p class="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Cronograma</p>
-                                    <p><strong>Inicio:</strong> {p_treatment.start_date ? p_treatment.start_date : 'No definido'}</p>
-                                    <p><strong>Fin Estimado:</strong> {p_treatment.estimated_end_date ? p_treatment.estimated_end_date : 'No definido'}</p>
+                                    <p><strong>Inicio:</strong> {formatDate(p_treatment.start_date)}</p>
+                                    <p><strong>Fin Estimado:</strong> {formatDate(p_treatment.estimated_end_date)}</p>
                                 </div>
                                 {#if p_treatment.objectives}
                                     <div>
