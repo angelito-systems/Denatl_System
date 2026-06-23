@@ -187,14 +187,20 @@
         calendar.render();
 
         setTimeout(() => {
-            if (initialPatientId) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const shouldCreate = urlParams.get('create') === 'true';
+
+            if (initialPatientId || shouldCreate) {
                 openNewCita();
-                form.patient_id = initialPatientId.toString();
-                const p = patients.find(
-                    (pt) => pt.id.toString() === initialPatientId.toString(),
-                );
-                if (p) {
-                    patientSearchQuery = `${p.first_name} ${p.last_name} (${p.dni})`;
+                
+                if (initialPatientId) {
+                    form.patient_id = initialPatientId.toString();
+                    const p = patients.find(
+                        (pt) => pt.id.toString() === initialPatientId.toString(),
+                    );
+                    if (p) {
+                        patientSearchQuery = `${p.first_name} ${p.last_name} (${p.dni})`;
+                    }
                 }
             }
         }, 150);
