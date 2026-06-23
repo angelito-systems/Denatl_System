@@ -29,7 +29,7 @@
     } from '@/components/ui/dialog';
     import { router, useForm } from '@inertiajs/svelte';
     import { index } from '@/routes/staff';
-    import { Search, Plus, UserCog, Trash2, Edit, Loader2, CalendarClock } from 'lucide-svelte';
+    import { Search, Plus, UserCog, Trash2, Edit, Loader2, CalendarClock, Eye, EyeOff } from 'lucide-svelte';
     import { Toast } from '@/lib/utils/toast';
     import ScheduleModal from '@/components/ScheduleModal.svelte';
 
@@ -50,13 +50,14 @@
         email: '',
         username: '',
         password: '',
-        role: 'Administrador',
+        roles: ['Administrador'],
         room: '',
         dni: '',
         cmp: '',
         is_active: true
     });
 
+    let showPassword = $state(false);
     let isSearchingDni = $state(false);
 
     async function searchDni() {
@@ -95,7 +96,7 @@
         userForm.reset();
         userForm.id = null;
         userForm.is_active = true;
-        userForm.role = 'Administrador';
+        userForm.roles = ['Administrador'];
         userForm.room = '';
         userForm.dni = '';
         userForm.cmp = '';
@@ -132,7 +133,7 @@
         userForm.email = user.email;
         userForm.username = user.username;
         userForm.password = ''; // Don't show password, only edit if filled
-        userForm.role = user.roles && user.roles.length > 0 ? user.roles[0].name : 'Dentista';
+        userForm.roles = user.roles && user.roles.length > 0 ? user.roles.map((r: any) => r.name) : ['Dentista'];
         userForm.room = user.room || '';
         userForm.dni = user.dni || '';
         userForm.cmp = user.cmp || '';
@@ -221,15 +222,19 @@
                             </TableCell>
                             <TableCell>{user.email}</TableCell>
                             <TableCell>
-                                {#if user.roles && user.roles.length > 0}
-                                    <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-md border border-purple-200">
-                                        {user.roles[0].name}
-                                    </span>
-                                {:else}
-                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md border border-blue-200">
-                                        Dentista
-                                    </span>
-                                {/if}
+                                <div class="flex flex-wrap gap-1">
+                                    {#if user.roles && user.roles.length > 0}
+                                        {#each user.roles as role}
+                                            <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-md border border-purple-200 whitespace-nowrap">
+                                                {role.name}
+                                            </span>
+                                        {/each}
+                                    {:else}
+                                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md border border-blue-200 whitespace-nowrap">
+                                            Dentista
+                                        </span>
+                                    {/if}
+                                </div>
                             </TableCell>
                             <TableCell>
                                 <span class="text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-200 text-xs">Activo</span>
@@ -304,19 +309,31 @@
                 </div>
                 <div class="space-y-2">
                     <Label>Contraseña *</Label>
-                    <Input type="password" bind:value={userForm.password} required={!userForm.id} placeholder={userForm.id ? "Dejar en blanco para no cambiar" : ""} />
+                    <div class="relative">
+                        <Input type={showPassword ? "text" : "password"} bind:value={userForm.password} required={!userForm.id} placeholder={userForm.id ? "Dejar en blanco para no cambiar" : ""} />
+                        <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onclick={() => showPassword = !showPassword}>
+                            {#if showPassword}
+                                <EyeOff class="h-4 w-4" />
+                            {:else}
+                                <Eye class="h-4 w-4" />
+                            {/if}
+                        </button>
+                    </div>
                     {#if userForm.errors.password}<p class="text-xs text-red-500">{userForm.errors.password}</p>{/if}
                 </div>
-                <div class="space-y-2">
-                    <Label>Rol del usuario *</Label>
-                    <select class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" bind:value={userForm.role}>
+                <div class="space-y-2 col-span-2">
+                    <Label>Roles del usuario *</Label>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
                         {#each roles as role}
-                            <option value={role}>{role}</option>
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox" id={`role-${role}`} value={role} bind:group={userForm.roles} class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
+                                <Label for={`role-${role}`} class="font-normal cursor-pointer">{role}</Label>
+                            </div>
                         {/each}
-                    </select>
-                    {#if userForm.errors.role}<p class="text-xs text-red-500">{userForm.errors.role}</p>{/if}
+                    </div>
+                    {#if userForm.errors.roles}<p class="text-xs text-red-500">{userForm.errors.roles}</p>{/if}
                 </div>
-                {#if userForm.role === 'Dentista'}
+                {#if userForm.roles.includes('Dentista')}
                     <div class="space-y-2">
                         <Label>Consultorio Asignado (Opcional)</Label>
                         <Input bind:value={userForm.room} placeholder="Ej: Consultorio 1" />

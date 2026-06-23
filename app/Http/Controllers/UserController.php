@@ -40,7 +40,8 @@ class UserController extends Controller
             'username' => 'required|string|max:255|unique:users',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
-            'role' => 'required|string|exists:roles,name',
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'string|exists:roles,name',
             'room' => 'nullable|string|max:255',
             'dni' => 'nullable|string|max:15|unique:users',
             'cmp' => 'nullable|string|max:255',
@@ -58,7 +59,7 @@ class UserController extends Controller
             'is_active' => $request->boolean('is_active', true),
         ]);
 
-        $user->assignRole($validated['role']);
+        $user->assignRole($validated['roles']);
 
         return redirect()->back()->with('success', 'Personal creado exitosamente.');
     }
@@ -70,7 +71,8 @@ class UserController extends Controller
             'last_name' => 'required|string|max:255',
             'username' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($staff->id)],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($staff->id)],
-            'role' => 'required|string|exists:roles,name',
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'string|exists:roles,name',
             'room' => 'nullable|string|max:255',
             'dni' => ['nullable', 'string', 'max:15', Rule::unique('users')->ignore($staff->id)],
             'cmp' => 'nullable|string|max:255',
@@ -92,7 +94,7 @@ class UserController extends Controller
             $staff->update(['password' => Hash::make($request->password)]);
         }
 
-        $staff->syncRoles([$validated['role']]);
+        $staff->syncRoles($validated['roles']);
 
         return redirect()->back()->with('success', 'Personal actualizado exitosamente.');
     }
