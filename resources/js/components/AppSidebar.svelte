@@ -169,7 +169,7 @@
                     title: 'Auditoría',
                     href: '/audits',
                     icon: ShieldAlert,
-                    roles: ['Super Admin'],
+                    roles: ['Administrador'],
                 },
             ],
         },

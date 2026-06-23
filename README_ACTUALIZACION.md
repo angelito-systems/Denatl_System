@@ -47,4 +47,4 @@ docker compose exec app php artisan optimize:clear
 
 ---
 
-¡Listo! Una vez finalizado el `npm run build`, puedes ingresar a tu sistema con la cuenta de **Super Admin** y verás la opción **"Auditoría"** en el menú lateral.
+¡Listo! Una vez finalizado el `npm run build`, puedes ingresar a tu sistema con la cuenta de **Administrador** y verás la opción **"Auditoría"** en el menú lateral.

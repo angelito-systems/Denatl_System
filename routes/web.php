@@ -82,8 +82,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('campaigns', CampaignController::class);
     });
 
-    // Módulo de Auditoría (Solo Super Admin)
-    Route::middleware(['role:Super Admin'])->group(function () {
+    // Módulo de Auditoría (Solo Administrador)
+    Route::middleware(['role:Administrador'])->group(function () {
         Route::get('audits', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('audits.index');
         Route::get('audits/{auditLog}', [\App\Http\Controllers\AuditLogController::class, 'show'])->name('audits.show');
         Route::post('audits/{auditLog}/review', [\App\Http\Controllers\AuditLogController::class, 'markAsReviewed'])->name('audits.review');

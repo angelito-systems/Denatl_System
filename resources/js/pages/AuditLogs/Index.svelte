@@ -130,7 +130,7 @@
                 Auditoría del Sistema
             </h1>
             <p class="text-muted-foreground mt-1">
-                Monitoreo centralizado y trazabilidad completa de actividades. Solo Super Admin.
+                Monitoreo centralizado y trazabilidad completa de actividades. Solo Administrador.
             </p>
         </div>
         <div class="flex gap-2">

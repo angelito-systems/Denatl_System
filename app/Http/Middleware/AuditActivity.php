@@ -71,7 +71,7 @@ class AuditActivity
 
         $errorDetails = [];
         if ($exception = $response->exception) {
-            // Only Super Admins will see the full stack trace in the UI, but we log it here
+            // Only Administrador will see the full stack trace in the UI, but we log it here
             $errorDetails = [
                 'message' => $exception->getMessage(),
                 'file' => $exception->getFile(),
